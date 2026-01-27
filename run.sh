@@ -29,7 +29,7 @@ export AMORO_CONF_DIR="$SCRIPT_DIR/conf"
 export AMORO_LOG_DIR="$SCRIPT_DIR/logs"
 
 
-# ./mvnw install -DskipTests -pl amoro-ams -am
+./mvnw install -DskipTests -pl amoro-ams -am
 
 LIB_PATH="amoro-ams/target/amoro-ams-dependency/lib"
 AMS_JAR="amoro-ams/target/amoro-ams-0.9-SNAPSHOT.jar"
