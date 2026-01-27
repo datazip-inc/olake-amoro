@@ -1624,6 +1624,8 @@
                             <exclude>site/**</exclude>
                             <!-- artifacts created during release process -->
                             <exclude>release/**</exclude>
+                            <exclude>conf-example/**</exclude>
+                            <exclude>run.sh</exclude>
                         </excludes>
                     </configuration>
                     <executions>
