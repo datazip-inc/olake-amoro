@@ -1,0 +1,25 @@
+{
+     "name": "catalog",
+     "type": "glue",
+     "optimizerGroup": "default",
+     "tableFormatList": [
+          "ICEBERG"
+     ],
+     "storageConfig": {
+          "storage.type": "S3",
+          "storage.s3.region": "ap-south-1",
+          "storage.s3.endpoint": ""
+     },
+     "authConfig": {
+          "auth.type": "AK/SK",
+          "auth.ak_sk.access_key": "",
+          "auth.ak_sk.secret_key": ""
+     },
+     "properties": {
+          "warehouse": "s3://bucket/",
+          "io.manifest.cache-enabled": "false",
+          "database-filer": "(amoro|amoro2)",
+          "table-filter": "(amoro\\.a)|(amoro2\\.a)"
+     },
+     "tableProperties": {}
+}
