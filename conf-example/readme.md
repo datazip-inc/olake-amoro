@@ -9,6 +9,8 @@ Stay inside the root directory of `olake-amoro` and run
 ./run.sh
 ```
 
+It will take time, wait until you see "Login: admin/admin"
+
 ### Step 3
 Register a Catalog into `olake-amoro`. 
 
