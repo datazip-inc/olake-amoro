@@ -1,0 +1,67 @@
+ams:
+  admin-username: admin
+  admin-password: admin
+  server-bind-host: "0.0.0.0"
+  server-expose-host: "172"
+
+  database:
+    type: postgres
+    jdbc-driver-class: org.postgresql.Driver
+    url: jdbc:postgresql://postgres:5432/iceberg
+    username: iceberg
+    password: password
+    auto-create-tables: true
+
+  thrift-server:
+    table-service:
+      bind-port: 1260
+    optimizing-service:
+      bind-port: 1261
+
+  http-server:
+    bind-port: 1630
+    rest-auth-type: token
+
+  terminal:
+    backend: local
+
+containers:
+  - name: yarnContainer
+    container-impl: org.apache.amoro.server.manager.SparkOptimizerContainer
+    properties:
+      spark-home: /opt/spark/
+      master: yarn
+      deploy-mode: client
+      export.SPARK_CONF_DIR: /opt/spark/conf/
+      export.HADOOP_CONF_DIR: /etc/hadoop/conf
+      export.HADOOP_USER_NAME: root
+      spark-conf.spark.driver.memory: "1g"
+      spark-conf.spark.executor.memory: "1g"
+      spark-conf.spark.executor.cores: "1"
+      spark-conf.spark.yarn.am.memory: "512m"
+      spark-conf.spark.yarn.maxAppAttempts: "1"
+      spark-conf.spark.jars: "/usr/local/amoro/lib/amoro-optimizer-common-0.8.1-incubating.jar,/usr/local/amoro/lib/amoro-common-0.8.1-incubating.jar,/usr/local/amoro/lib/amoro-format-iceberg-0.8.1-incubating.jar,/usr/local/amoro/lib/amoro-shade-thrift-0.20.0-0.7.0-incubating.jar,/usr/local/amoro/lib/args4j-2.33.jar,/usr/local/amoro/lib/slf4j-api-1.7.30.jar"
+      spark-conf.spark.yarn.stagingDir: "s3a://warehouse/.spark-staging"
+      spark-conf.spark.hadoop.fs.s3a.endpoint: "http://minio:9000"
+      spark-conf.spark.hadoop.fs.s3a.access.key: "admin"
+      spark-conf.spark.hadoop.fs.s3a.secret.key: "password"
+      spark-conf.spark.hadoop.fs.s3a.path.style.access: "true"
+      spark-conf.spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
+      spark-conf.spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
+
+catalogs:
+  - name: olake_iceberg
+    type: iceberg
+    table-formats:
+      - iceberg
+    properties:
+      warehouse: s3a://warehouse/
+      s3.endpoint: http://minio:9000
+      s3.access-key: admin
+      s3.secret-key: password
+      s3.path-style-access: "true"
+      jdbc:
+        driver: org.postgresql.Driver
+        url: jdbc:postgresql://postgres:5432/iceberg
+        user: iceberg
+        password: password

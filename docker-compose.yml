@@ -1,0 +1,225 @@
+services:
+  # ========== SPARK INSTALLATION (for optimizer) ==========
+  spark-installer:
+    image: apache/spark:3.5.0
+    container_name: spark-installer
+    restart: "no"
+    user: root
+    networks:
+      - iceberg_net
+    volumes:
+      - spark-install:/opt/spark_install
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["cp -r /opt/spark/* /opt/spark_install/ && chmod -R 755 /opt/spark_install/bin"]
+
+  # ========== AMORO AMS SERVICE ==========
+  amoro:
+    image: apache/amoro:latest
+    container_name: amoro
+    hostname: amoro
+    ports:
+      - "1630:1630"
+      - "1260:1260"
+      - "1261:1261"
+    depends_on:
+      postgres-init-amoro:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      yarn-resourcemanager:
+        condition: service_started
+      spark-installer:
+        condition: service_completed_successfully
+    environment:
+      - JVM_XMS=1024
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - SPARK_CONF_DIR=/opt/spark/conf
+      - HADOOP_CONF_DIR=/etc/hadoop/conf
+    networks:
+      - iceberg_net
+    volumes:
+      - /Users/apple/Desktop/colake/olake/destination/iceberg/local-test/data/amoro-data:/tmp/warehouse
+      # Spark installation (mounted from spark-installer) - writable so we can add config
+      - spark-install:/opt/spark
+      # Spark configuration for YARN client mode (mounted after Spark install)
+      - ./amoro-test/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./amoro-test/config.yaml:/usr/local/amoro/conf/config.yaml:ro
+      - ./amoro-test/hadoop-conf:/etc/hadoop/conf:ro
+      # Shared staging directory for Spark YARN apps
+      - spark-staging:/shared-spark-staging
+    command: ["/entrypoint.sh", "ams"]
+    tty: true
+    stdin_open: true
+
+  # ========== AMORO OPTIMIZER INITIALIZATION ==========
+  amoro-init-optimizer:
+    image: apache/amoro:latest
+    container_name: amoro-init-optimizer
+    restart: unless-stopped
+    networks:
+      - iceberg_net
+    depends_on:
+      amoro:
+        condition: service_started
+    volumes:
+      - ./amoro-test/init-optimizer.sh:/init-optimizer.sh:ro
+    entrypoint: ["/bin/sh", "/init-optimizer.sh"]
+
+  # ========== AMORO CATALOG INITIALIZATION ==========
+  amoro-init-catalog:
+    image: apache/amoro:latest
+    container_name: amoro-init-catalog
+    restart: "no"
+    networks:
+      - iceberg_net
+    depends_on:
+      amoro-init-optimizer:
+        condition: service_started
+    volumes:
+      - ./amoro-test/init-catalog.sh:/init-catalog.sh:ro
+    entrypoint: ["/bin/sh", "/init-catalog.sh"]
+
+  # ========== YARN RESOURCEMANAGER ==========
+  yarn-resourcemanager:
+    image: apache/hadoop:3.4.1
+    platform: linux/amd64
+    container_name: yarn-resourcemanager
+    hostname: yarn-resourcemanager
+    user: root
+    environment:
+      - YARN_RESOURCEMANAGER_USER=root
+      - YARN_NODEMANAGER_USER=root
+    ports:
+      - "8088:8088"
+      - "8030:8030"
+      - "8031:8031"
+      - "8032:8032"
+      - "8033:8033"
+    networks:
+      - iceberg_net
+    volumes:
+      - ./amoro-test/hadoop-conf/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml:ro
+      - ./amoro-test/hadoop-conf/capacity-scheduler.xml:/opt/hadoop/etc/hadoop/capacity-scheduler.xml:ro
+    command: ["yarn", "resourcemanager"]
+
+  # ========== YARN NODEMANAGER ==========
+  yarn-nodemanager:
+    image: apache/hadoop:3.4.1
+    platform: linux/amd64
+    container_name: yarn-nodemanager
+    hostname: yarn-nodemanager
+    user: root
+    environment:
+      - YARN_NODEMANAGER_USER=root
+    depends_on:
+      - yarn-resourcemanager
+    networks:
+      - iceberg_net
+    volumes:
+      - ./amoro-test/hadoop-conf/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml:ro
+      - ./amoro-test/hadoop-conf/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+    command: ["bash", "-c", "cp /opt/hadoop/share/hadoop/tools/lib/hadoop-aws-*.jar /opt/hadoop/share/hadoop/common/lib/ && cp /opt/hadoop/share/hadoop/tools/lib/bundle-*.jar /opt/hadoop/share/hadoop/common/lib/ && exec yarn nodemanager"]
+
+  # ========== MINIO (S3 COMPATIBLE STORAGE) ==========
+  minio:
+    image: minio/minio:RELEASE.2025-04-03T14-56-28Z
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=minio
+    networks:
+      iceberg_net:
+        aliases:
+          - warehouse.minio
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - /Users/apple/Desktop/colake/olake/destination/iceberg/local-test/data/minio-data:/data
+    command: ["server", "/data", "--console-address", ":9001"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # ========== MINIO CLIENT SETUP ==========
+  mc:
+    depends_on:
+      minio:
+        condition: service_healthy
+    image: minio/mc:RELEASE.2025-04-03T17-07-56Z
+    container_name: mc
+    networks:
+      - iceberg_net
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    entrypoint: |
+      /bin/sh -c "
+      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+      if ! /usr/bin/mc ls minio/warehouse > /dev/null 2>&1; then
+        /usr/bin/mc mb minio/warehouse;
+        /usr/bin/mc policy set public minio/warehouse;
+      fi;
+      tail -f /dev/null
+      "
+
+  # ========== POSTGRESQL DATABASE ==========
+  postgres:
+    image: postgres:15
+    container_name: iceberg-postgres
+    networks:
+      - iceberg_net
+    environment:
+      - POSTGRES_USER=iceberg
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=iceberg
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "iceberg", "-d", "iceberg"]
+      interval: 2s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "5432:5432"
+    volumes:
+      - /Users/apple/Desktop/colake/olake/destination/iceberg/local-test/data/postgres-data:/var/lib/postgresql/data
+      - ./amoro-test/init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql:ro
+
+  # ========== POSTGRES AMORO DATABASE INITIALIZATION ==========
+  postgres-init-amoro:
+    image: postgres:15
+    container_name: postgres-init-amoro
+    restart: "no"
+    networks:
+      - iceberg_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - PGPASSWORD=password
+    volumes:
+      - ./amoro-test/postgres-init-amoro.sh:/postgres-init-amoro.sh:ro
+    entrypoint: ["/bin/sh", "/postgres-init-amoro.sh"]
+
+ 
+
+# ========== NETWORKS ==========
+networks:
+  iceberg_net:
+    driver: bridge
+
+# ========== VOLUMES ==========
+volumes:
+  postgres-data:
+  minio-data:
+  spark-install:
+  spark-staging:

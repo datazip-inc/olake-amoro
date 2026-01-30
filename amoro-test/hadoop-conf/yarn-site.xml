@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <!-- ResourceManager Configuration -->
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>yarn-resourcemanager</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.address</name>
+    <value>yarn-resourcemanager:8032</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.scheduler.address</name>
+    <value>yarn-resourcemanager:8030</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.resource-tracker.address</name>
+    <value>yarn-resourcemanager:8031</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.admin.address</name>
+    <value>yarn-resourcemanager:8033</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.webapp.address</name>
+    <value>yarn-resourcemanager:8088</value>
+  </property>
+
+  <!-- NodeManager Configuration -->
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.local-dirs</name>
+    <value>/tmp/hadoop-yarn/local</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.log-dirs</name>
+    <value>/tmp/hadoop-yarn/logs</value>
+  </property>
+
+  <!-- Application Master Configuration -->
+  <property>
+    <name>yarn.app.mapreduce.am.env</name>
+    <value>HADOOP_MAPRED_HOME=${HADOOP_HOME}</value>
+  </property>
+  <property>
+    <name>mapreduce.map.env</name>
+    <value>HADOOP_MAPRED_HOME=${HADOOP_HOME}</value>
+  </property>
+  <property>
+    <name>mapreduce.reduce.env</name>
+    <value>HADOOP_MAPRED_HOME=${HADOOP_HOME}</value>
+  </property>
+
+  <!-- Memory Configuration -->
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>4096</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.maximum-allocation-mb</name>
+    <value>4096</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.minimum-allocation-mb</name>
+    <value>256</value>
+  </property>
+
+  <!-- CPU Configuration -->
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>2</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.maximum-allocation-vcores</name>
+    <value>2</value>
+  </property>
+
+  <!-- Disable timestamp/checksum verification to avoid issues with Docker volume timestamps -->
+  <property>
+    <name>yarn.nodemanager.localizer.fetch.checksum.enabled</name>
+    <value>false</value>
+  </property>
+  <!-- Set high tolerance for file modification timestamp differences (in ms) -->
+  <property>
+    <name>yarn.nodemanager.resource-localizer.download.fs.modify-time.tolerance.ms</name>
+    <value>60000</value>
+  </property>
+
+  <!-- Application classpath including S3A (hadoop-aws) jars from tools/lib -->
+  <property>
+    <name>yarn.application.classpath</name>
+    <value>
+      /opt/hadoop/etc/hadoop,
+      /opt/hadoop/share/hadoop/common/*,
+      /opt/hadoop/share/hadoop/common/lib/*,
+      /opt/hadoop/share/hadoop/hdfs/*,
+      /opt/hadoop/share/hadoop/hdfs/lib/*,
+      /opt/hadoop/share/hadoop/mapreduce/*,
+      /opt/hadoop/share/hadoop/mapreduce/lib/*,
+      /opt/hadoop/share/hadoop/yarn/*,
+      /opt/hadoop/share/hadoop/yarn/lib/*,
+      /opt/hadoop/share/hadoop/tools/lib/*
+    </value>
+  </property>
+</configuration>
