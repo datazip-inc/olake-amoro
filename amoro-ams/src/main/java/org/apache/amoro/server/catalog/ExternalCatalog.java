@@ -126,6 +126,7 @@ public class ExternalCatalog extends ServerCatalog {
 
   @Override
   public AmoroTable<?> loadTable(String database, String tableName) {
+    unifiedCatalog.refresh();
     return doAs(() -> unifiedCatalog.loadTable(database, tableName));
   }
 

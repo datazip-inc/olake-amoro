@@ -133,6 +133,9 @@ public class MixedAndIcebergTableDescriptor extends PersistentBase
   @Override
   public ServerTableMeta getTableDetail(AmoroTable<?> amoroTable) {
     MixedTable table = getTable(amoroTable);
+    if (!table.isKeyedTable()) {
+      table.asUnkeyedTable().refresh();
+    }
     String tableFormat = decorateTableFormat(amoroTable);
     // set basic info
     TableBasicInfo tableBasicInfo = getTableBasicInfo(table);
@@ -256,6 +259,7 @@ public class MixedAndIcebergTableDescriptor extends PersistentBase
               mixedTable.asKeyedTable().baseTable(),
               snapshotIdOfTableRef(mixedTable.asKeyedTable().baseTable(), ref)));
     } else {
+      mixedTable.asUnkeyedTable().refresh();
       tableAndSnapshotIdList.add(
           Pair.of(
               mixedTable.asUnkeyedTable(), snapshotIdOfTableRef(mixedTable.asUnkeyedTable(), ref)));
@@ -356,6 +360,9 @@ public class MixedAndIcebergTableDescriptor extends PersistentBase
   public List<PartitionFileBaseInfo> getSnapshotDetail(
       AmoroTable<?> amoroTable, String snapshotId, @Nullable String ref) {
     MixedTable mixedTable = getTable(amoroTable);
+    if (mixedTable.isUnkeyedTable()) {
+      mixedTable.asUnkeyedTable().refresh();
+    }
     List<PartitionFileBaseInfo> result = new ArrayList<>();
     long commitId = Long.parseLong(snapshotId);
     Snapshot snapshot;
@@ -438,6 +445,7 @@ public class MixedAndIcebergTableDescriptor extends PersistentBase
     if (mixedTable.isKeyedTable()) {
       table = mixedTable.asKeyedTable().baseTable();
     } else {
+      mixedTable.asUnkeyedTable().refresh();
       table = mixedTable.asUnkeyedTable();
     }
 
@@ -449,6 +457,9 @@ public class MixedAndIcebergTableDescriptor extends PersistentBase
   @Override
   public List<PartitionBaseInfo> getTablePartitions(AmoroTable<?> amoroTable) {
     MixedTable mixedTable = getTable(amoroTable);
+    if (mixedTable.isUnkeyedTable()) {
+      mixedTable.asUnkeyedTable().refresh();
+    }
     if (mixedTable.spec().isUnpartitioned()) {
       return new ArrayList<>();
     }
