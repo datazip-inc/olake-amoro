@@ -1,0 +1,50 @@
+name: license-check
+ 
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "master"
+      - "staging"
+ 
+jobs:
+  license-check:
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+ 
+      - name: Check modifications header
+        run: |
+          echo "Checking modified files..."
+ 
+          CHANGED_FILES=$(git diff --name-only origin/master...HEAD)
+          CHECK_FOR1="// Modified by Olake in 2026"
+          CHECK_FOR2="// Original work Copyright Apache Amoro"
+          NOT_MODIFIED_FILES=""
+          for file in $CHANGED_FILES; do
+            if [[ ! -f "$file" ]]; then
+              continue
+            fi
+            if ! head -100 "$file" | grep -q "$CHECK_FOR1" || ! head -100 "$file" | grep -q "$CHECK_FOR2"; then
+              NOT_MODIFIED_FILES+="$file"$'\n'
+            fi
+          done
+ 
+          if [ -n "$NOT_MODIFIED_FILES" ]; then
+            echo "ERROR: The following files do not have Modifications header:"
+            echo "$NOT_MODIFIED_FILES"
+            exit 1
+          fi
+ 
+          echo "All modified Java files have Modifications header"
+ 
+ 
+ 
+ 
+ 
