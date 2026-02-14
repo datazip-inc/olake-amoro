@@ -151,13 +151,13 @@ containers:
     container-impl: org.apache.amoro.server.manager.SparkOptimizerContainer
     properties:
       spark-home: /opt/spark/
-      # Kind control-plane hostname — resolved via Docker DNS (amoro-net)
-      master: k8s://https://amoro-cluster-control-plane:6443
+      # Kind control-plane hostname — resolved via Docker DNS (iceberg-net)
+      master: k8s://https://fusion-cluster-control-plane:6443
       deploy-mode: cluster
       job-uri: "local:///opt/spark/usrlib/optimizer-job.jar"
       export.HADOOP_USER_NAME: spark
       export.SPARK_CONF_DIR: /opt/spark/conf/
-      spark-conf.spark.kubernetes.container.image: "apache/amoro-spark-optimizer:latest"
+      spark-conf.spark.kubernetes.container.image: "olakego/fusion-spark:latest"
       spark-conf.spark.kubernetes.container.image.pullPolicy: "IfNotPresent"
       spark-conf.spark.kubernetes.namespace: spark
       spark-conf.spark.kubernetes.authenticate.driver.serviceAccountName: spark
@@ -169,7 +169,7 @@ containers:
       spark-conf.spark.executor.memory: "1g"
       spark-conf.spark.executor.cores: "1"
       # AWS/MinIO credentials for S3FileIO (Spark optimizer pods need these)
-      spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_ACCESS_KEY_ID: "amoro-s3-credentials:access-key-id"
-      spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_SECRET_ACCESS_KEY: "amoro-s3-credentials:secret-access-key"
-      spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_ACCESS_KEY_ID: "amoro-s3-credentials:access-key-id"
-      spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_SECRET_ACCESS_KEY: "amoro-s3-credentials:secret-access-key"
+      spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_ACCESS_KEY_ID: "fusion-s3-credentials:access-key-id"
+      spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_SECRET_ACCESS_KEY: "fusion-s3-credentials:secret-access-key"
+      spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_ACCESS_KEY_ID: "fusion-s3-credentials:access-key-id"
+      spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_SECRET_ACCESS_KEY: "fusion-s3-credentials:secret-access-key"
