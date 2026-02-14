@@ -23,7 +23,8 @@ name: Publish Docker Image
 
 on:
   push:
-    - "feat/fusion-releaser"
+    branches:
+      - "feat/fusion-releaser"
   workflow_call:
     inputs:
       tag:
