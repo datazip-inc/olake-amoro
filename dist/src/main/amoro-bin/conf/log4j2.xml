@@ -47,10 +47,16 @@
             <DefaultRolloverStrategy max="25"/>
         </RollingFile>
 
-        <!--Logs with a grade of info-->
+        <!--Logs with a grade of info (executor-thread logs are excluded)-->
         <RollingFile name="infoFileAppender"
                      fileName="${LOG_HOME}/ams-info.log"
                      filePattern="${LOG_HOME}/history/ams-info-%d{yyyy-MM-dd}-%i.log.gz">
+            <!--Deny logs from threads containing "executor" in their name-->
+            <ScriptFilter onMatch="DENY" onMismatch="NEUTRAL">
+                <Script name="denyExecutorThreads" language="javascript"><![CDATA[
+                    logEvent.getThreadName().contains("executor")
+                ]]></Script>
+            </ScriptFilter>
             <!--Set log format-->
             <PatternLayout>
                 <pattern>%d %p [%t] [%logger{39}] [%X{RequestId}] - %m%n</pattern>
@@ -71,6 +77,59 @@
                 </Delete>
             </DefaultRolloverStrategy>
         </RollingFile>
+
+        <!--***************************************************************-->
+        <!--*********************Executor Logs Only************************-->
+        <!--***************************************************************-->
+
+        <!--
+          This file captures ALL logs from threads whose name contains "executor".
+          This includes threads like:
+            async-table-runtime-refresh-executor-*
+            async-snapshots-expiring-executor-*
+            async-optimizing-commit-executor-*
+          Logs from ANY package on these threads go here.
+        -->
+        <RollingFile name="executorFileAppender"
+                     fileName="${LOG_HOME}/executor.log"
+                     filePattern="${LOG_HOME}/history/executor-%d{yyyy-MM-dd}-%i.log.gz">
+            <!--Accept ONLY logs from threads containing "executor" in their name-->
+            <ScriptFilter onMatch="ACCEPT" onMismatch="DENY">
+                <Script name="acceptExecutorThreads" language="javascript"><![CDATA[
+                    logEvent.getThreadName().contains("executor")
+                ]]></Script>
+            </ScriptFilter>
+
+            <PatternLayout>
+                <pattern>%d %p [%t] [%logger{39}] [%X{RequestId}] - %m%n</pattern>
+            </PatternLayout>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+
+            <DefaultRolloverStrategy fileIndex="nomax"/>
+        </RollingFile>
+
+        <!--*********************Optimizer Package Logs***********************-->
+        <RollingFile name="optimizerCodeAppender"
+                     fileName="${LOG_HOME}/optimizer-code.log"
+                     filePattern="${LOG_HOME}/history/optimizer-code-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout>
+                <pattern>%d %p [%t] [%logger{39}] [%X{RequestId}] - %m%n</pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="256MB"/>
+            </Policies>
+            <DefaultRolloverStrategy fileIndex="nomax">
+                <Delete basePath="${LOG_HOME}/history" maxDepth="1">
+                    <IfFileName glob="optimizer-code-*.log.gz"/>
+                    <IfLastModified age="7d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
 
         <!--Logs with a grade of error-->
         <RollingFile name="errorFileAppender"
@@ -104,17 +163,19 @@
     </Appenders>
 
     <Loggers>
-        <logger name="amoro.metric"  level="info" additivity="false">
+        <logger name="amoro.metric" level="info" additivity="false">
             <!-- iceberg rest metric reporter logs -->
             <AppenderRef ref="amoroMetricReporter"/>
         </logger>
 
-        <logger name="org.apache.iceberg.metrics.LoggingMetricsReporter"  level="info" additivity="false">
+        <logger name="org.apache.iceberg.metrics.LoggingMetricsReporter"
+                level="info"
+                additivity="false">
             <!-- iceberg rest metric reporter logs -->
             <AppenderRef ref="amoroMetricReporter"/>
         </logger>
 
-        <logger name="org.apache.spark"  level="warn" additivity="false">
+        <logger name="org.apache.spark" level="warn" additivity="false">
             <AppenderRef ref="infoFileAppender"/>
             <AppenderRef ref="consoleAppender" level="${CONSOLE_LEVEL}"/>
         </logger>
@@ -125,13 +186,25 @@
 
         <logger name="org.apache.iceberg.SnapshotScan" level="debug"/>
 
+        <!--
+          Executor thread logs are now separated by ScriptFilter on each appender,
+          not by package-level logger. All threads with "executor" in their name
+          go to executor.log and are excluded from ams-info.log.
+        -->
+
+        <!-- Capture all logs from the amoro-optimizer code (all sub-packages) -->
+        <logger name="org.apache.amoro.optimizer" level="info" additivity="true">
+            <AppenderRef ref="optimizerCodeAppender"/>
+        </logger>
+
         <Root level="debug">
             <!--By default, debug logs are not printed-->
             <!--<AppenderRef ref="debugFileAppender" level="debug"/>-->
             <AppenderRef ref="infoFileAppender" level="info"/>
+            <AppenderRef ref="executorFileAppender" level="info"/>
             <AppenderRef ref="errorFileAppender" level="error"/>
             <!-- SET CONSOLE_LOG_LEVEL=info to print console logger in docker -->
-            <AppenderRef ref="consoleAppender" level="${CONSOLE_LEVEL}" />
+            <AppenderRef ref="consoleAppender" level="${CONSOLE_LEVEL}"/>
         </Root>
 
     </Loggers>
