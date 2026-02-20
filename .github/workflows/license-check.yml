@@ -1,4 +1,3 @@
-
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -16,8 +15,9 @@
 # limitations under the License.
 #
 
-# Modified by Olake in 2026
-# Original work Copyright Apache Amoro
+
+# // Modified by Datazip Pvt Ltd. in 2026
+# // Original work Copyright The Apache Software Foundation (ASF)
 
 name: license-check
  
@@ -44,15 +44,22 @@ jobs:
         run: |
           echo "Checking modified files..."
  
-          CHANGED_FILES=$(git diff --name-only origin/master...HEAD)
-          CHECK_FOR1="// Modified by Olake in 2026"
-          CHECK_FOR2="// Original work Copyright Apache Amoro"
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT_BRANCH" = "staging" ]; then
+            BASE_BRANCH="origin/master"
+          else
+            BASE_BRANCH="origin/staging"
+          fi
+          
+          CHANGED_FILES=$(git diff --name-only $BASE_BRANCH...HEAD)
+          CHECK_FOR_PATTERN1="// Modified by Datazip Pvt Ltd. in [0-9]\{4\}"
+          CHECK_FOR_PATTERN2="// Original work Copyright The Apache Software Foundation \\(ASF\\)"
           NOT_MODIFIED_FILES=""
           for file in $CHANGED_FILES; do
             if [[ ! -f "$file" ]]; then
               continue
             fi
-            if ! head -100 "$file" | grep -q "$CHECK_FOR1" || ! head -100 "$file" | grep -q "$CHECK_FOR2"; then
+            if ! sed -n '19p' "$file" | grep -q -E "$CHECK_FOR_PATTERN1" || ! sed -n '20p' "$file" | grep -q -E "$CHECK_FOR_PATTERN2"; then
               NOT_MODIFIED_FILES+="$file"$'\n'
             fi
           done
@@ -64,8 +71,3 @@ jobs:
           fi
  
           echo "All modified Java files have Modifications header"
- 
- 
- 
- 
- 
