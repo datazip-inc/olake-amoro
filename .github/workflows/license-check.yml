@@ -52,8 +52,8 @@ jobs:
           fi
           
           CHANGED_FILES=$(git diff --name-only $BASE_BRANCH...HEAD)
-          CHECK_FOR_PATTERN1="// Modified by Datazip Pvt Ltd. in [0-9]\{4\}"
-          CHECK_FOR_PATTERN2="// Original work Copyright The Apache Software Foundation \\(ASF\\)"
+          CHECK_FOR_PATTERN1="(//|# //) Modified by Datazip Pvt Ltd. in [0-9]{4}"
+          CHECK_FOR_PATTERN2="(//|# //) Original work Copyright The Apache Software Foundation \\(ASF\\)"
           NOT_MODIFIED_FILES=""
           for file in $CHANGED_FILES; do
             if [[ ! -f "$file" ]]; then
