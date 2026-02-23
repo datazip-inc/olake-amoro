@@ -58,7 +58,7 @@ jobs:
             if [[ ! -f "$file" ]]; then
               continue
             fi
-            if ! sed -n '19p' "$file" | grep -q -E "$CHECK_FOR_PATTERN1" || ! sed -n '20p' "$file" | grep -q -E "$CHECK_FOR_PATTERN2"; then
+            if ! sed -n '19p' "$file" | grep -q -E "$DATAZIP_MODIFICATION_YEAR_REGEX" || ! sed -n '20p' "$file" | grep -q -E "$ASF_ORIGINAL_WORK_NOTICE_REGEX"; then
               NOT_MODIFIED_FILES+="$file"$'\n'
             fi
           done
@@ -70,4 +70,3 @@ jobs:
           fi
  
           echo "All modified files have Modifications header"
-          
