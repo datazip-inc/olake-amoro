@@ -69,4 +69,4 @@ jobs:
             exit 1
           fi
  
-          echo "All modified Java files have Modifications header"
+          echo "All modified files have Modifications header"
