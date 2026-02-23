@@ -18,55 +18,47 @@
 # Modified by Datazip Pvt. Ltd. in 2026
 # Original work Copyright The Apache Software Foundation (ASF)
 
-name: license-check
- 
+name: Modification-Header-Check
+
 on:
-  push:
-    branches:
-      - "*"
   pull_request:
     branches:
       - "master"
       - "staging"
- 
+
 jobs:
-  license-check:
+  modification-header-check:
     runs-on: ubuntu-latest
- 
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
- 
+
       - name: Check modifications header
         run: |
           echo "Checking modified files..."
- 
-          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [ "$CURRENT_BRANCH" = "staging" ]; then
-            BASE_BRANCH="origin/master"
-          else
-            BASE_BRANCH="origin/staging"
-          fi
-          
-          CHANGED_FILES=$(git diff --name-only $BASE_BRANCH...HEAD)
-          DATAZIP_MODIFICATION_YEAR_REGEX="Modified by Datazip Pvt. Ltd. in [0-9]{4}"
+
+          BASE_BRANCH=${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD)
+          DATAZIP_MODIFICATION_YEAR_REGEX="Modified by Datazip Pvt\. Ltd\. in [0-9]{4}"
           ASF_ORIGINAL_WORK_NOTICE_REGEX="Original work Copyright The Apache Software Foundation \\(ASF\\)"
           NOT_MODIFIED_FILES=""
           for file in $CHANGED_FILES; do
             if [[ ! -f "$file" ]]; then
               continue
             fi
-            if ! sed -n '18p' "$file" | grep -q -E "$DATAZIP_MODIFICATION_YEAR_REGEX" || ! sed -n '19p' "$file" | grep -q -E "$ASF_ORIGINAL_WORK_NOTICE_REGEX"; then
+
+            if ! head -40 "$file" | grep -q -E "$DATAZIP_MODIFICATION_YEAR_REGEX" || ! head -40 "$file" | grep -q -E "$ASF_ORIGINAL_WORK_NOTICE_REGEX"; then
               NOT_MODIFIED_FILES+="$file"$'\n'
             fi
           done
- 
+
           if [ -n "$NOT_MODIFIED_FILES" ]; then
-            echo "ERROR: The following files do not have Modifications header:"
+            echo "::error::The following files are missing required modification headers:"
             echo "$NOT_MODIFIED_FILES"
             exit 1
           fi
- 
+
           echo "All modified files have Modifications header"
