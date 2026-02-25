@@ -297,6 +297,11 @@ public class TableConfigurations {
                 properties,
                 TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO,
                 TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO_DEFAULT))
+        .setMajorTriggerInterval(
+            CompatiblePropertyUtil.propertyAsInt(
+                properties,
+                TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL,
+                TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL_DEFAULT))
         .setFullTriggerInterval(
             CompatiblePropertyUtil.propertyAsInt(
                 properties,

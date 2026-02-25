@@ -118,6 +118,10 @@ public class TableProperties {
       "self-optimizing.major.trigger.duplicate-ratio";
   public static final double SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO_DEFAULT = 0.1;
 
+  public static final String SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL =
+      "self-optimizing.major.trigger.interval";
+  public static final int SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL_DEFAULT = -1; // not trigger
+
   public static final String SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL =
       "self-optimizing.full.trigger.interval";
   public static final int SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL_DEFAULT = -1; // not trigger

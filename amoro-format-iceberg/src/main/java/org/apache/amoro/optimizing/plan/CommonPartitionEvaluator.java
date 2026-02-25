@@ -54,6 +54,7 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   protected final long planTime;
 
   private final boolean reachFullInterval;
+  private final boolean reachMajorInterval;
 
   // fragment files
   protected int fragmentFileCount = 0;
@@ -112,6 +113,9 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     this.lastMinorOptimizingTime = lastMinorOptimizingTime;
     this.lastMajorOptimizingTime = lastMajorOptimizingTime;
     this.lastFullOptimizingTime = lastFullOptimizingTime;
+    this.reachMajorInterval =
+        config.getMajorTriggerInterval() >= 0
+            && planTime - lastMajorOptimizingTime > config.getMajorTriggerInterval();
     this.reachFullInterval =
         config.getFullTriggerInterval() >= 0
             && planTime - lastFullOptimizingTime > config.getFullTriggerInterval();
@@ -401,7 +405,7 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   }
 
   public boolean isMajorNecessary() {
-    return enoughContent() || rewriteSegmentFileCount > 0;
+    return isMajorIntervalNecessary();
   }
 
   public boolean isMinorNecessary() {
@@ -440,6 +444,16 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
 
   public boolean anyDeleteExist() {
     return equalityDeleteFileCount > 0 || posDeleteFileCount > 0;
+  }
+
+  private boolean isMajorIntervalNecessary() {
+    if (!reachMajorInterval) {
+      return false;
+    }
+
+    // Interval trigger should still require some pending input to avoid empty major process.
+    int dataFileCount = fragmentFileCount + getSegmentFileCount();
+    return dataFileCount > 1 || anyDeleteExist();
   }
 
   @Override

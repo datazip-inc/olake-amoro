@@ -1,8 +1,26 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 services:
   fusion:
     image: olakego/fusion:latest
     container_name: olake-fusion
+    profiles:
+      - prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,6 +52,8 @@ services:
   fusion-init:
     image: curlimages/curl
     container_name: fusion-init
+    profiles:
+      - prod
     depends_on:
       fusion:
         condition: service_started
@@ -154,6 +174,9 @@ services:
   postgres:
     image: postgres:15
     container_name: postgres
+    profiles:
+      - prod
+      - dev
     networks:
       iceberg-net:
     ports:
@@ -175,6 +198,9 @@ services:
   minio:
     image: minio/minio:RELEASE.2025-04-03T14-56-28Z
     container_name: minio
+    profiles:
+      - prod
+      - dev
     networks:
       iceberg-net:
         ipv4_address: 172.30.0.5
@@ -192,6 +218,9 @@ services:
   mc:
     image: minio/mc:RELEASE.2025-04-03T17-07-56Z
     container_name: mc
+    profiles:
+      - prod
+      - dev
     depends_on:
       - minio
     networks:
@@ -208,6 +237,8 @@ services:
   kind-setup:
     image: docker:27-cli
     container_name: fusion-kind-setup
+    profiles:
+      - prod
     networks:
       iceberg-net:
     volumes:
@@ -255,6 +286,8 @@ services:
   kind-load-image:
     image: docker:27-cli
     container_name: fusion-kind-load-image
+    profiles:
+      - prod
     depends_on:
       kind-setup:
         condition: service_completed_successfully
@@ -330,6 +363,8 @@ services:
   spark-copy:
     image: olakego/fusion-spark:latest
     container_name: fusion-spark-copy
+    profiles:
+      - prod
     entrypoint:
       - /bin/sh
       - -c
