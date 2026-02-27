@@ -26,6 +26,6 @@ import java.util.List;
 public class ScalaTestUtil {
 
   public static <T> Seq<T> seq(List<T> values) {
-    return JavaConverters.asScalaBuffer(values).toSeq();
+    return JavaConverters.asScalaBuffer(values).toList();
   }
 }

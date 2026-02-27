@@ -686,6 +686,7 @@ public class IcebergTableMaintainer implements TableMaintainer {
     return CloseableIterable.transform(
         CloseableIterable.withNoopClose(Iterables.concat(dataFiles, deleteFiles)),
         contentFile -> {
+          ContentFile<?> file = (ContentFile<?>) contentFile.copyWithoutStats();
           Literal<Long> literal =
               getExpireTimestampLiteral(
                   contentFile,
@@ -694,7 +695,7 @@ public class IcebergTableMaintainer implements TableMaintainer {
                       expirationConfig.getDateTimePattern(), Locale.getDefault()),
                   expirationConfig.getNumberDateFormat(),
                   expireValue);
-          return new FileEntry(contentFile.copyWithoutStats(), literal);
+          return new FileEntry(file, literal);
         });
   }
 
