@@ -16,7 +16,7 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: amoro-s3-credentials
+  name: fusion-s3-credentials
   namespace: spark
 type: Opaque
 stringData:
