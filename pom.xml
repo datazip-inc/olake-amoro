@@ -70,8 +70,8 @@
     </issueManagement>
 
     <properties>
-        <java.source.version>11</java.source.version>
-        <java.target.version>11</java.target.version>
+        <java.source.version>17</java.source.version>
+        <java.target.version>17</java.target.version>
         <maven.compiler.source>${java.source.version}</maven.compiler.source>
         <maven.compiler.target>${java.target.version}</maven.compiler.target>
         <maven.version>3.9.11</maven.version>
