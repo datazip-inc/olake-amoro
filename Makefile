@@ -31,8 +31,9 @@ AMORO_DEBUG_PORT ?= 5005
 AMORO_DEBUG_SUSPEND ?= n
 AMORO_DIST_TAR := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
 AMORO_RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT
+AMORO_BIN_HOME := $(CURDIR)/dist/src/main/amoro-bin
 
-.PHONY: setup-fusion stop-fusion restart-fusion debug-fusion teardown logs status pods shell alias help debug-local stop-local start-deps stop-deps ams-debug ams-start ams-dist
+.PHONY: setup-fusion stop-fusion restart-fusion debug-fusion teardown logs status pods shell alias help debug-local stop-local start-deps stop-deps ams-debug ams-start ams-dist prepare-optimizer-lib prepare-debug-runtime setup-debug-mode teardown-debug-mode
 
 # Default target
 .DEFAULT_GOAL := help
@@ -51,6 +52,10 @@ help:
 	@echo "  make stop-deps      Stop Postgres and Minio"
 	@echo "  make ams-start      Start AMS locally (no debugger)"
 	@echo "  make ams-debug      Start AMS locally with JDWP on port 5005, then attach IDE"
+	@echo "  make setup-debug-mode  One-command debug setup (deps + build + lib sync)"
+	@echo "  make teardown-debug-mode  One-command debug teardown (stop deps + cleanup)"
+	@echo "  make prepare-debug-runtime  Build tar and sync optimizer lib in one step"
+	@echo "  make prepare-optimizer-lib  Extract dist tar and sync only lib/ to dist/src/main/amoro-bin"
 	@echo "  make teardown      Remove everything (Kind cluster + services + volumes)"
 	@echo "  make logs          View Fusion logs"
 	@echo "  make status        Show cluster and service status"
@@ -95,6 +100,40 @@ stop-local:
 start-deps:
 	@echo "Starting local dependencies (Postgres & Minio)..."
 	@docker compose -f docker/kind/docker-compose.yml --profile dev up -d
+
+stop-deps:
+	@echo "Stopping local dependencies (Postgres & Minio)..."
+	@docker compose -f docker/kind/docker-compose.yml --profile dev down
+
+prepare-debug-runtime:
+	@echo "Building distribution tar (mvn clean package -DskipTests)..."
+	@mvn clean package -DskipTests
+	@$(MAKE) prepare-optimizer-lib
+
+setup-debug-mode:
+	@echo "Setting up debug mode (deps + dist build + optimizer lib sync)..."
+	@$(MAKE) start-deps
+	@$(MAKE) prepare-debug-runtime
+	@echo "Setup complete. Next: run 'AmoroServiceContainer' from launch.json."
+
+teardown-debug-mode:
+	@echo "Tearing down debug mode (deps + extracted runtime cleanup)..."
+	@$(MAKE) stop-deps
+	@rm -rf "$(AMORO_RUNTIME_HOME)"
+	@echo "Teardown complete."
+
+prepare-optimizer-lib:
+	@if [ ! -f "$(AMORO_DIST_TAR)" ]; then \
+		echo "Missing distribution tar: $(AMORO_DIST_TAR)"; \
+		echo "Build it first with: mvn -DskipTests package"; \
+		exit 1; \
+	fi
+	@mkdir -p "$(CURDIR)/dist/target"
+	@rm -rf "$(AMORO_RUNTIME_HOME)"
+	@tar -xzf "$(AMORO_DIST_TAR)" -C "$(CURDIR)/dist/target"
+	@rm -rf "$(AMORO_BIN_HOME)/lib"
+	@cp -R "$(AMORO_RUNTIME_HOME)/lib" "$(AMORO_BIN_HOME)/lib"
+	@echo "Synced optimizer libs to: $(AMORO_BIN_HOME)/lib"
 
 teardown:
 	@echo "Removing Kind clusters..."

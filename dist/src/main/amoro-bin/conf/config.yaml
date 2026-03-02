@@ -14,10 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# --- Config for running AMS from code (IDE / mvn) ---
+# Postgres at localhost:5432; server binds to 0.0.0.0 so UI is at http://localhost:1630
+#
 
 ams:
   admin-username: admin
-  admin-password: admin
+  admin-password: password
   server-bind-host: "0.0.0.0"
   server-expose-host: "127.0.0.1"
 
@@ -29,7 +32,7 @@ ams:
       bind-port: 1260
       worker-thread-count: 20
     optimizing-service:
-      bind-port: 1261
+      bind-port: 2261
 
   http-server:
     session-timeout: 7d
@@ -51,7 +54,6 @@ ams:
     runtime-data-keep-days: 30
     runtime-data-expire-interval-hours: 1
     refresh-group-interval: 30s
-    break-quota-limit-enabled: true
 
   optimizer:
     heart-beat-timeout: 1min # 60000
@@ -62,12 +64,6 @@ ams:
 
   blocker:
     timeout: 1min # 60000
-
-  # config table runtime factories
-  table-runtime-factories:
-    - name: default
-      properties:
-        ~
 
   # optional features
   expire-snapshots:
@@ -112,44 +108,18 @@ ams:
     refresh-interval: 3min          # 3 min
     max-size: 3360                # Keep 7 days history by default, 7 * 24 * 60 / 3 = 3360
 
+  # Postgres — use localhost when running AMS from code (IDE / mvn).
+  # Ensure Postgres is running (e.g. local install or: docker run -p 5432:5432 -e POSTGRES_USER=iceberg -e POSTGRES_PASSWORD=password -e POSTGRES_DB=iceberg postgres:15)
   database:
-    type: derby
-    jdbc-driver-class: org.apache.derby.jdbc.EmbeddedDriver
-    url: jdbc:derby:/tmp/amoro/derby;create=true
+    type: postgres
+    jdbc-driver-class: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/iceberg
+    username: iceberg
+    password: password
     connection-pool-max-total: 20
     connection-pool-max-idle: 16
     connection-pool-max-wait-millis: 30000
-
-#  ha:
-#    enabled: true
-#    cluster-name: xxx
-#    zookeeper-address: xxx.xxx.xxx.xxx:2181
-#    session-timeout: 30s
-#    connection-timeout: 30s
-
-#  MySQL database configuration.
-#  database:
-#    type: mysql
-#    jdbc-driver-class: com.mysql.cj.jdbc.Driver
-#    url: jdbc:mysql://127.0.0.1:3306/db?useUnicode=true&characterEncoding=UTF8&autoReconnect=true&useAffectedRows=true&allowPublicKeyRetrieval=true&useSSL=false
-#    username: root
-#    password: root
-#    auto-create-tables: true
-#    connection-pool-max-total: 20
-#    connection-pool-max-idle: 16
-#    connection-pool-max-wait-millis: 30000
-
-#  Postgres database configuration.
-#  database:
-#    type: postgres
-#    jdbc-driver-class: org.postgresql.Driver
-#    url: jdbc:postgresql://127.0.0.1:5432/db
-#    username: user
-#    password: passwd
-#    auto-create-tables: true
-#    connection-pool-max-total: 20
-#    connection-pool-max-idle: 16
-#    connection-pool-max-wait-millis: 30000
+    auto-create-tables: true
 
   terminal:
     backend: local
@@ -162,64 +132,57 @@ ams:
       using-session-catalog-for-hive: false
       spark.sql.iceberg.handle-timestamp-without-timezone: false
 
-#  Kyuubi terminal backend configuration.
-#  terminal:
-#    backend: kyuubi
-#    kyuubi.jdbc.url: jdbc:hive2://127.0.0.1:10009/
-
-#  High availability configuration.
-#  ha:
-#    enabled: true
-#    cluster-name: default
-#    zookeeper-address: 127.0.0.1:2181,127.0.0.1:2182,127.0.0.1:2183
-
-
+# ---------------------------------------------------------------------------
+# Optimizer Containers
+# ---------------------------------------------------------------------------
+# localContainer  — runs inside the Amoro JVM; zero external dependencies.
+#
+# sparkContainer  — submits Spark jobs to the Kind K8s cluster.
+#                   The docker-compose "amoro-init" service auto-creates the
+#                   'spark-container' optimizer group + 1 optimizer using this.
+#                   Requires the olakego/fusion-spark:latest image to
+#                   be built and loaded into Kind (done automatically by the
+#                   kind-load-image service).
+# ---------------------------------------------------------------------------
 containers:
   - name: localContainer
     container-impl: org.apache.amoro.server.manager.LocalOptimizerContainer
     properties:
-      export.JAVA_HOME: "/opt/java"   # JDK environment
+      export.JAVA_HOME: "/opt/java/openjdk"   # eclipse-temurin JDK path
 
-#containers:
+  # Development-friendly local optimizer container.
+  # This uses the AMS process environment (JAVA_HOME/PATH) and avoids machine-specific paths.
+  # When creating an optimizer group for this container, set group property `memory` (MB/thread).
+  - name: localDevContainer
+    container-impl: org.apache.amoro.server.manager.LocalOptimizerContainer
+    properties: {}
 
-# - name: KubernetesContainer
-#   container-impl: org.apache.amoro.server.manager.KubernetesOptimizerContainer
-#    properties:
-#     kube-config-path: ~/.kube/config
-#     image: apache/amoro:{version}
-#     namespace: default
-
-#  - name: flinkContainer
-#    container-impl: org.apache.amoro.server.manager.FlinkOptimizerContainer
-#    properties:
-#      flink-home: /opt/flink/                                     # Flink install home
-#      target: yarn-per-job                                        # Flink run target, (yarn-per-job, yarn-application, kubernetes-application)
-#      export.JVM_ARGS: -Djava.security.krb5.conf=/opt/krb5.conf   # Flink launch jvm args, like kerberos config when ues kerberos
-#      export.HADOOP_CONF_DIR: /etc/hadoop/conf/                   # Hadoop config dir
-#      export.HADOOP_USER_NAME: hadoop                             # Hadoop user submit on yarn
-#      export.FLINK_CONF_DIR: /opt/flink/conf/                     # Flink config dir
-#      # flink kubernetes application properties.
-#      job-uri: "local:///opt/flink/usrlib/optimizer-job.jar"      # Optimizer job main jar for kubernetes application
-#      flink-conf.kubernetes.container.image: "apache/amoro-flink-optimizer:{version}"   # Optimizer image ref
-#      flink-conf.kubernetes.service-account: flink                # Service account that is used within kubernetes cluster.
-
-#containers:
-#  - name: sparkContainer
-#    container-impl: org.apache.amoro.server.manager.SparkOptimizerContainer
-#    properties:
-#      spark-home: /opt/spark/                                     # Spark install home
-#      master: yarn                                                # The cluster manager to connect to. See the list of https://spark.apache.org/docs/latest/submitting-applications.html#master-urls.
-#      deploy-mode: cluster                                        # Spark deploy mode, client or cluster
-#      export.JVM_ARGS: -Djava.security.krb5.conf=/opt/krb5.conf   # Spark launch jvm args, like kerberos config when ues kerberos
-#      export.HADOOP_CONF_DIR: /etc/hadoop/conf/                   # Hadoop config dir
-#      export.HADOOP_USER_NAME: hadoop                             # Hadoop user submit on yarn
-#      export.SPARK_CONF_DIR: /opt/spark/conf/                     # Spark config dir
-#      # spark kubernetes application properties.
-#      job-uri: "local:///opt/spark/usrlib/optimizer-job.jar"      # Optimizer job main jar for kubernetes application
-#      ams-optimizing-uri: thrift://ams.amoro.service.local:1261   # AMS optimizing uri
-#      spark-conf.spark.dynamicAllocation.enabled: "true"          # Enabling DRA feature can make full use of computing resources
-#      spark-conf.spark.shuffle.service.enabled: "false"           # If spark DRA is used on kubernetes, we should set it false
-#      spark-conf.spark.dynamicAllocation.shuffleTracking.enabled: "true"                          # Enables shuffle file tracking for executors, which allows dynamic allocation without the need for an external shuffle service
-#      spark-conf.spark.kubernetes.container.image: "apache/amoro-spark-optimizer:{version}"       # Optimizer image ref
-#      spark-conf.spark.kubernetes.namespace: <spark-namespace>                                    # Namespace that is used within kubernetes cluster
-#      spark-conf.spark.kubernetes.authenticate.driver.serviceAccountName: <spark-sa>              # Service account that is used within kubernetes cluster.
+  - name: sparkContainer
+    container-impl: org.apache.amoro.server.manager.SparkOptimizerContainer
+    properties:
+      spark-home: /Users/apple/Desktop/colake/olake-amoro/docker/kind/data/.runtime/spark/
+      # Use the active Kind API server endpoint from ~/.kube/config.
+      master: k8s://https://127.0.0.1:33971
+      deploy-mode: cluster
+      # Driver pod must load jar from its own filesystem path.
+      job-uri: "local:///opt/spark/usrlib/optimizer-job.jar"
+      # Driver pod must reach AMS thrift service on host machine.
+      ams-optimizing-uri: thrift://host.docker.internal:2261
+      export.HADOOP_USER_NAME: spark
+      export.SPARK_CONF_DIR: /Users/apple/Desktop/colake/olake-amoro/docker/kind/data/.runtime/spark/conf/
+      spark-conf.spark.kubernetes.container.image: "olakego/fusion-spark:latest"
+      spark-conf.spark.kubernetes.container.image.pullPolicy: "IfNotPresent"
+      spark-conf.spark.kubernetes.namespace: spark
+      spark-conf.spark.kubernetes.authenticate.driver.serviceAccountName: spark
+      spark-conf.spark.kubernetes.authenticate.executor.serviceAccountName: spark
+      spark-conf.spark.dynamicAllocation.enabled: "true"
+      spark-conf.spark.shuffle.service.enabled: "false"
+      spark-conf.spark.dynamicAllocation.shuffleTracking.enabled: "true"
+      spark-conf.spark.driver.memory: "1g"
+      spark-conf.spark.executor.memory: "1g"
+      spark-conf.spark.executor.cores: "1"
+      # AWS/MinIO credentials for S3FileIO (Spark optimizer pods need these)
+      spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_ACCESS_KEY_ID: "fusion-s3-credentials:access-key-id"
+      spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_SECRET_ACCESS_KEY: "fusion-s3-credentials:secret-access-key"
+      spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_ACCESS_KEY_ID: "fusion-s3-credentials:access-key-id"
+      spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_SECRET_ACCESS_KEY: "fusion-s3-credentials:secret-access-key"

@@ -84,8 +84,8 @@ else
     MODULE_OPTS=""
 fi
 
-# merge parameter
-JAVA_OPTS="$BASE_JVM_OPTS $GC_LOG_OPTS $MODULE_OPTS"
+# merge parameters:
+JAVA_OPTS="$BASE_JVM_OPTS $GC_LOG_OPTS $MODULE_OPTS $JVM_EXTRA_CONFIG $OPTIMIZER_JAVA_OPTS"
 
 RUN_SERVER="org.apache.amoro.optimizer.standalone.StandaloneOptimizer"
 CMDS="$JAVA_RUN $JAVA_OPTS $RUN_SERVER $ARGS"
