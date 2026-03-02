@@ -48,7 +48,8 @@ public class LocalOptimizerContainer extends AbstractOptimizerContainer {
       List<String> exportCommands = new ArrayList<>(exportSystemProperties());
       String optimizerJavaOpts = System.getenv(ENV_OPTIMIZER_JAVA_OPTS);
       if (StringUtils.isNotEmpty(optimizerJavaOpts)) {
-        exportCommands.add(String.format("export %s='%s'", ENV_OPTIMIZER_JAVA_OPTS, optimizerJavaOpts));
+        exportCommands.add(
+            String.format("export %s='%s'", ENV_OPTIMIZER_JAVA_OPTS, optimizerJavaOpts));
       }
 
       String exportCmd = String.join(" && ", exportCommands);
