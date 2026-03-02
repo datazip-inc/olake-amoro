@@ -17,7 +17,7 @@
 # Modified by Olake by Datazip Inc. in 2026
 
 
-# Build and publish Docker images. Triggered by push (dev-v2-java-17) or workflow_call with tag (e.g. release).
+# Build and publish Docker images. Triggered by push (dev-v2-java-17-scala-2-13-18) or workflow_call with tag (e.g. release).
 
 name: Publish Docker Image
 
@@ -61,7 +61,7 @@ jobs:
       - name: Set Docker tags
         id: meta
         run: |
-          VERSION_TAG="${{ github.event_name == 'workflow_call' && inputs.tag || 'dev-v2-java-17' }}"
+          VERSION_TAG="${{ github.event_name == 'workflow_call' && inputs.tag || 'dev-v2-java-17-scala-2-13-18' }}"
           if [ "${{ github.ref }}" = "refs/heads/master" ]; then
             case "${VERSION_TAG}" in v*) ;; *) echo "::error::On master branch, version tag must start with 'v' (e.g. v1.0.0). Got: ${VERSION_TAG}"; exit 1 ;; esac
             echo "tags=olakego/fusion:latest,olakego/fusion:${VERSION_TAG}" >> $GITHUB_OUTPUT
@@ -98,7 +98,7 @@ jobs:
     strategy:
       matrix:
         spark: [ "3.5.7" ]  # spark version supported
-        scala: [ "2.12.15" ] # scala version supported
+        scala: [ "2.13.18" ] # scala version supported
     steps:
       - uses: actions/checkout@v3
       - name: Set up JDK 17
@@ -117,7 +117,7 @@ jobs:
       - name: Set Docker tags
         id: meta
         run: |
-          VERSION_TAG="${{ github.event_name == 'workflow_call' && inputs.tag || 'dev-v2-java-17' }}"
+          VERSION_TAG="${{ github.event_name == 'workflow_call' && inputs.tag || 'dev-v2-java-17-scala-2-13-18' }}"
           if [ "${{ github.ref }}" = "refs/heads/master" ]; then
             case "${VERSION_TAG}" in v*) ;; *) echo "::error::On master branch, version tag must start with 'v' (e.g. v1.0.0). Got: ${VERSION_TAG}"; exit 1 ;; esac
             echo "tags=olakego/fusion-spark:latest,olakego/fusion-spark:${VERSION_TAG}" >> $GITHUB_OUTPUT
