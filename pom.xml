@@ -1852,15 +1852,6 @@
         </profile>
 
         <profile>
-            <id>java11</id>
-            <activation>
-                <jdk>[11,)</jdk>
-            </activation>
-            <properties>
-                <java.target.version>11</java.target.version>
-            </properties>
-        </profile>
-        <profile>
             <id>spark-3.3</id>
             <properties>
                 <spark.version>3.3.4</spark.version>
