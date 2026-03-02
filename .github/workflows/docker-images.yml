@@ -152,7 +152,7 @@ jobs:
           && echo "AMORO_VERSION=${AMORO_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Build optimizer module with Maven
-        run: ./mvnw clean package -pl 'amoro-optimizer/amoro-optimizer-spark' -am -e ${SPARK_VERSION} -DskipTests -B -ntp
+        run: ./mvnw clean package -pl 'amoro-optimizer/amoro-optimizer-spark' -am -e ${SPARK_VERSION} -Dscala.version=${{ matrix.scala }} -Dscala.binary.version=${{ steps.versions.outputs.SCALA_BINARY_VERSION }} -DskipTests -B -ntp
 
       - name: Build and Push Spark Optimizer Docker Image to olakego/fusion-spark
         uses: docker/build-push-action@v4
