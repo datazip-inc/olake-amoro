@@ -1,26 +1,10 @@
-#  Licensed to the Apache Software Foundation (ASF) under one
-#  or more contributor license agreements.  See the NOTICE file
-#  distributed with this work for additional information
-#  regarding copyright ownership.  The ASF licenses this file
-#  to you under the Apache License, Version 2.0 (the
-#  "License"); you may not use this file except in compliance
-#  with the License.  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-# limitations under the License.
-
 ARG SPARK_VERSION=3.5.7
-
 FROM apache/spark:${SPARK_VERSION}
 
 ARG MAVEN_MIRROR=https://repo.maven.apache.org/maven2
 ARG OPTIMIZER_JOB=optimizer-job.jar
 ARG AWS_VERSION=2.24.12
+
 USER root
 
 RUN apt-get update \
@@ -33,3 +17,14 @@ RUN cd $SPARK_HOME/jars \
     && mkdir -p $SPARK_HOME/usrlib
 
 COPY $OPTIMIZER_JOB $SPARK_HOME/usrlib/optimizer-job.jar
+
+# Create log directories and set permission
+RUN mkdir -p /opt/spark/logs/history \
+    && chown -R spark:spark /opt/spark/logs
+
+# Copy optimizer log4j2 configuration
+RUN mkdir -p /opt/spark/custom-conf
+COPY log4j2.xml /opt/spark/custom-conf/log4j2.xml
+RUN mkdir -p /opt/spark/conf && \
+    echo "spark.driver.extraJavaOptions=-Dlog4j.configurationFile=/opt/spark/custom-conf/log4j2.xml" >> /opt/spark/conf/spark.properties && \
+    echo "spark.executor.extraJavaOptions=-Dlog4j.configurationFile=/opt/spark/custom-conf/log4j2.xml" >> /opt/spark/conf/spark.properties

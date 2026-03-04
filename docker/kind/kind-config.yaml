@@ -24,6 +24,9 @@ nodes:
             - "fusion-cluster-control-plane"
   - role: worker
     image: kindest/node:v1.28.0
+    extraMounts:
+      - hostPath: /home/azureuser/arsalan/olake-amoro/docker/kind/logs/spark
+        containerPath: /var/log/spark
     kubeadmConfigPatches:
       - |
         kind: JoinConfiguration
@@ -32,6 +35,9 @@ nodes:
             max-pods: "110"
   - role: worker
     image: kindest/node:v1.28.0
+    extraMounts:
+      - hostPath: /home/azureuser/arsalan/olake-amoro/docker/kind/logs/spark
+        containerPath: /var/log/spark
     kubeadmConfigPatches:
       - |
         kind: JoinConfiguration

@@ -25,6 +25,7 @@ import org.apache.amoro.optimizer.common.OptimizerExecutor;
 import org.apache.spark.api.java.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * The {@code SparkOptimizingTaskExecuteFunction} defines the whole processing logic that how to
@@ -42,6 +43,14 @@ public class SparkOptimizingTaskFunction implements Function<OptimizingTask, Opt
 
   @Override
   public OptimizingTaskResult call(OptimizingTask task) {
-    return OptimizerExecutor.executeTask(config, threadId, task, LOG);
+    // Set MDC on executor thread for log routing by processId/taskId
+    MDC.put("processId", String.valueOf(task.getTaskId().getProcessId()));
+    MDC.put("taskId", String.valueOf(task.getTaskId().getTaskId()));
+    try {
+      return OptimizerExecutor.executeTask(config, threadId, task, LOG);
+    } finally {
+      MDC.remove("processId");
+      MDC.remove("taskId");
+    }
   }
 }

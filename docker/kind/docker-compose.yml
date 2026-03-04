@@ -1,7 +1,7 @@
 
 services:
   fusion:
-    image: olakego/fusion:latest
+    image: olakego/fusion:dev-v1
     container_name: olake-fusion
     depends_on:
       postgres:
@@ -25,8 +25,11 @@ services:
       AWS_SECRET_ACCESS_KEY: password
     volumes:
       - ./config.yaml:/usr/local/amoro/conf/config.yaml:ro
+      - ../../dist/src/main/amoro-bin/conf/log4j2.xml:/usr/local/amoro/conf/log4j2.xml:ro
+      - ../../dist/src/main/amoro-bin/conf/jvm.properties:/usr/local/amoro/conf/jvm.properties:ro
       - kind-kubeconfig:/root/.kube:ro
       - spark-home:/opt/spark:ro
+      - ./logs/amoro:/usr/local/amoro/logs
     command: ["/entrypoint.sh", "ams"]
     tty: true
     stdin_open: true
@@ -267,8 +270,8 @@ services:
       - -c
       - |
         set -e
-        IMAGE="olakego/fusion-spark:latest"
-        IMAGE_REF="docker.io/olakego/fusion-spark:latest"
+        IMAGE="olakego/fusion-spark:dev-arsalan"
+        IMAGE_REF="docker.io/olakego/fusion-spark:dev-arsalan"
 
         if ! docker image inspect $$IMAGE >/dev/null 2>&1; then
           echo "==> Image $$IMAGE not found locally — skipping."
@@ -328,7 +331,7 @@ services:
         echo "==> Done — image available on all workers."
 
   spark-copy:
-    image: olakego/fusion-spark:latest
+    image: olakego/fusion-spark:dev-arsalan
     container_name: fusion-spark-copy
     entrypoint:
       - /bin/sh

@@ -32,6 +32,7 @@ import org.apache.amoro.utils.SerializationUtil;
 import org.apache.iceberg.common.DynConstructors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -54,9 +55,15 @@ public class OptimizerExecutor extends AbstractOptimizerOperator {
       OptimizingTaskResult result = null;
       try {
         OptimizingTask task = pollTask();
-        if (task != null && ackTask(task)) {
-          ackTask = task;
-          result = executeTask(task);
+        if (task != null) {
+          // Set MDC context on the driver side as soon as a task is polled
+          MDC.put("processId", String.valueOf(task.getTaskId().getProcessId()));
+          MDC.put("taskId", String.valueOf(task.getTaskId().getTaskId()));
+          
+          if (ackTask(task)) {
+            ackTask = task;
+            result = executeTask(task);
+          }
         }
       } catch (Throwable t) {
         if (ackTask != null) {
@@ -75,6 +82,9 @@ public class OptimizerExecutor extends AbstractOptimizerOperator {
         if (result != null) {
           completeTask(result);
         }
+        // Clear MDC context after driver completes task
+        MDC.remove("processId");
+        MDC.remove("taskId");
       }
     }
   }

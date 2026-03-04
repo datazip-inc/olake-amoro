@@ -117,6 +117,7 @@ ams:
     connection-pool-max-total: 20
     connection-pool-max-idle: 16
     connection-pool-max-wait-millis: 30000
+    auto-create-table: true
 
   terminal:
     backend: local
@@ -157,7 +158,9 @@ containers:
       job-uri: "local:///opt/spark/usrlib/optimizer-job.jar"
       export.HADOOP_USER_NAME: spark
       export.SPARK_CONF_DIR: /opt/spark/conf/
-      spark-conf.spark.kubernetes.container.image: "olakego/fusion-spark:latest"
+      spark-conf.spark.driver.extraJavaOptions: "-Dlog4j.configurationFile=/opt/spark/custom-conf/log4j2.xml"
+      spark-conf.spark.executor.extraJavaOptions: "-Dlog4j.configurationFile=/opt/spark/custom-conf/log4j2.xml"
+      spark-conf.spark.kubernetes.container.image: "olakego/fusion-spark:dev-arsalan"
       spark-conf.spark.kubernetes.container.image.pullPolicy: "IfNotPresent"
       spark-conf.spark.kubernetes.namespace: spark
       spark-conf.spark.kubernetes.authenticate.driver.serviceAccountName: spark
@@ -169,6 +172,14 @@ containers:
       spark-conf.spark.executor.memory: "1g"
       spark-conf.spark.executor.cores: "1"
       # AWS/MinIO credentials for S3FileIO (Spark optimizer pods need these)
+      spark-conf.spark.kubernetes.driver.volumes.hostPath.spark-logs.mount.path: "/opt/spark/logs"
+      spark-conf.spark.kubernetes.driver.volumes.hostPath.spark-logs.options.path: "/var/log/spark"
+      spark-conf.spark.kubernetes.executor.volumes.hostPath.spark-logs.mount.path: "/opt/spark/logs"
+      spark-conf.spark.kubernetes.executor.volumes.hostPath.spark-logs.options.path: "/var/log/spark"
+      spark-conf.spark.kubernetes.driverEnv.OPTIMIZER_LOG_DIR_NAME: "spark-optimizer-logs"
+      spark-conf.spark.kubernetes.driverEnv.CONSOLE_LOG_LEVEL: "info"
+      spark-conf.spark.kubernetes.executorEnv.OPTIMIZER_LOG_DIR_NAME: "spark-optimizer-logs"
+      spark-conf.spark.kubernetes.executorEnv.CONSOLE_LOG_LEVEL: "info"
       spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_ACCESS_KEY_ID: "fusion-s3-credentials:access-key-id"
       spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_SECRET_ACCESS_KEY: "fusion-s3-credentials:secret-access-key"
       spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_ACCESS_KEY_ID: "fusion-s3-credentials:access-key-id"

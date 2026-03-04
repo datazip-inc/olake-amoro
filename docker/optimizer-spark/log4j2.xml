@@ -19,8 +19,9 @@
 
 <Configuration monitorInterval="10">
     <properties>
-        <property name="LOG_DIR">/opt/spark/logs</property>
-        <property name="CONSOLE_LEVEL">${env:CONSOLE_LOG_LEVEL:-off}</property>
+        <property name="POD_LOG_SUBDIR">${env:SPARK_EXECUTOR_ID:-driver}</property>
+        <property name="LOG_DIR">/opt/spark/logs/${POD_LOG_SUBDIR}</property>
+        <property name="CONSOLE_LEVEL">${env:CONSOLE_LOG_LEVEL:-info}</property>
     </properties>
 
     <Appenders>
@@ -28,7 +29,7 @@
         <Console name="consoleAppender" target="SYSTEM_OUT">
             <!--Set log format and color-->
             <PatternLayout
-                    pattern="%d %p [%t] [%logger{39}] [%X{RequestId}] - %m%n"/>
+                    pattern="%d %p [%t] [%logger{39}] [pid:%X{processId} tid:%X{taskId}] - %m%n"/>
         </Console>
         <!--*********************File Log***********************-->
         <!--Logs with a grade of debug-->
@@ -37,7 +38,7 @@
                      filePattern="${LOG_DIR}/history/optimizer-debug-%i.log">
             <!--Set log format-->
             <PatternLayout>
-                <pattern>%d %p [%t] [%logger{39}] [%X{RequestId}] - %m%n</pattern>
+                <pattern>%d %p [%t] [%logger{39}] [pid:%X{processId} tid:%X{taskId}] - %m%n</pattern>
             </PatternLayout>
             <Policies>
                 <!--Set log file slice parameters-->
@@ -56,7 +57,7 @@
                      filePattern="${LOG_DIR}/history/optimizer-info-%d{yyyy-MM-dd}-%i.log.gz">
             <!--Set log format-->
             <PatternLayout>
-                <pattern>%d %p [%t] [%logger{39}] [%X{RequestId}] - %m%n</pattern>
+                <pattern>%d %p [%t] [%logger{39}] [pid:%X{processId} tid:%X{taskId}] - %m%n</pattern>
             </PatternLayout>
             <Policies>
                 <!--Set the time for rolling updates of log files, depending on the file naming filePattern setting-->
@@ -79,7 +80,7 @@
                      filePattern="${LOG_DIR}/history/optimizer-error-%i.log.gz">
             <!--Set log format-->
             <PatternLayout>
-                <pattern>%d %p [%t] [%logger{39}] [%X{RequestId}] - %m%n</pattern>
+                <pattern>%d %p [%t] [%logger{39}] [pid:%X{processId} tid:%X{taskId}] - %m%n</pattern>
             </PatternLayout>
             <Policies>
                 <!--Set log file slice parameters-->
@@ -91,6 +92,29 @@
              it exceeds the size; depends on %i in filePattern-->
             <DefaultRolloverStrategy max="7"/>
         </RollingFile>
+
+        <!--*********************Per-Process Routing Log***********************-->
+        <Routing name="taskRouter">
+            <Routes pattern="$${ctx:processId}-$${ctx:taskId}">
+                <!-- Default route when MDC values are missing (e.g., Spark init) -->
+                <Route key="$${ctx:processId}-$${ctx:taskId}" ref="infoFileAppender"/>
+
+                <!-- Route for dynamic logs WITH a processId and taskId set -->
+                <Route>
+                    <RollingFile name="task-${ctx:processId}-${ctx:taskId}"
+                                 fileName="${LOG_DIR}/process-${ctx:processId}/task-${ctx:taskId}.log"
+                                 filePattern="${LOG_DIR}/history/process-${ctx:processId}/task-${ctx:taskId}-%i.log.gz">
+                        <PatternLayout>
+                            <pattern>%d %p [%t] [%logger{39}] [pid:%X{processId} tid:%X{taskId}] - %m%n</pattern>
+                        </PatternLayout>
+                        <Policies>
+                            <SizeBasedTriggeringPolicy size="64MB"/>
+                        </Policies>
+                        <DefaultRolloverStrategy max="7"/>
+                    </RollingFile>
+                </Route>
+            </Routes>
+        </Routing>
     </Appenders>
 
     <Loggers>
@@ -99,6 +123,7 @@
 <!--            <AppenderRef ref="debugFileAppender" level="debug"/>-->
             <AppenderRef ref="infoFileAppender" level="info"/>
             <AppenderRef ref="errorFileAppender" level="error"/>
+            <AppenderRef ref="taskRouter" level="info"/>
             <!-- SET CONSOLE_LOG_LEVEL=info to print console logger in docker -->
             <AppenderRef ref="consoleAppender" level="${CONSOLE_LEVEL}" />
         </Root>
