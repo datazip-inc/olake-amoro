@@ -282,30 +282,16 @@ services:
           exit 0
         fi
 
-        # ---- Per-node check: only import where missing ----
-        NEED_IMPORT=""
-        for NODE in $$NODES; do
-          if docker exec $$NODE ctr --namespace=k8s.io images ls -q 2>/dev/null | grep -q "$$IMAGE_REF"; then
-            echo "==> $$NODE: image already present — skipping."
-          else
-            NEED_IMPORT="$$NEED_IMPORT $$NODE"
-          fi
-        done
-
-        if [ -z "$$NEED_IMPORT" ]; then
-          echo "==> Image present on all workers — nothing to do."
-          exit 0
-        fi
-
-        # ---- Save image to tmpfs-backed tarball (fast RAM I/O) ----
+        # ---- Always import to refresh mutable tags like ":latest" ----
+        # This prevents stale runtime images (e.g. old Java version) from being reused.
         echo "==> Saving $$IMAGE to tarball (tmpfs)..."
         docker save $$IMAGE -o /tmp/spark-optimizer.tar
         echo "   Saved ($$(du -h /tmp/spark-optimizer.tar | cut -f1))."
 
-        # ---- Parallel import into workers that need it ----
-        echo "==> Importing into Kind worker nodes (parallel)..."
+        # ---- Parallel import into all workers ----
+        echo "==> Importing into Kind worker nodes (parallel, force refresh)..."
         PIDS=""
-        for NODE in $$NEED_IMPORT; do
+        for NODE in $$NODES; do
           echo "   Starting import into $$NODE..."
           (cat /tmp/spark-optimizer.tar | docker exec -i $$NODE ctr --namespace=k8s.io images import - && \
             echo "   $$NODE: done.") &
