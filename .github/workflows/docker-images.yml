@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Modified by Olake by Datazip Inc. in 2026
+# Modified by Datazip Inc. in 2026
 
 
 # Build and publish Docker images. Triggered by push (dev-v1) or workflow_call with tag (e.g. release).
@@ -22,9 +22,6 @@
 name: Publish Docker Image
 
 on:
-  push:
-    branches:
-      - "feat/fusion-releaser"
   workflow_call:
     inputs:
       tag:

@@ -15,7 +15,7 @@
 #  See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Modified by Olake by Datazip Inc. in 2026
+# Modified by Datazip Inc. in 2026
 
 # Usage:
 #   Run the docker command below under project dir.
