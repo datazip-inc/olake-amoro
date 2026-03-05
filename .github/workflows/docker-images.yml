@@ -22,11 +22,22 @@
 name: Publish Docker Image
 
 on:
+  push:
+    branches:
+      - "feat/fusion-releaser"
   workflow_call:
     inputs:
       tag:
         description: 'Version tag for the image (e.g. v1.0.0).'
         type: string
+        required: true
+    # Use org-level or repo-level secrets; caller must pass with secrets: inherit
+    secrets:
+      DOCKER_USERNAME:
+        description: 'Docker Hub username (org or repo secret)'
+        required: true
+      DOCKER_PASSWORD:
+        description: 'Docker Hub password or token (org or repo secret)'
         required: true
 
 
