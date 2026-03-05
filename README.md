@@ -14,6 +14,8 @@
  - WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  - See the License for the specific language governing permissions and 
  - limitations under the License.
+ -
+ - Modified by Olake by Datazip Inc. in 2026
 -->
 <p align="center">
   <img src="https://amoro.apache.org/img/amoro-logo.svg" alt="Amoro logo" height="120px"/>

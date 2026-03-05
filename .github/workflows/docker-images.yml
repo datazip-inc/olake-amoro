@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  docker-amoro:
+  docker-fusion:
     name: Push Fusion Docker Image
     runs-on: ubuntu-latest
     environment: docker publish
