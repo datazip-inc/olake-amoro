@@ -92,7 +92,7 @@ for reference.
 The following guide describes how to import the Amoro project into IntelliJ IDEA and deploy it.
 
 ### Requirements
-+ Java Version: Java 11 is required.
++ Java Version: Java 17 is required.
 
 #### Required plugins
 1. Go to `Settings` → `Plugins` in IntelliJ IDEA.
