@@ -14,5 +14,6 @@
   "java.import.exclusions": [
     "**/node_modules/**",
     "**/.git/**"
-  ]
+  ],
+  "makefile.configureOnOpen": false
 }

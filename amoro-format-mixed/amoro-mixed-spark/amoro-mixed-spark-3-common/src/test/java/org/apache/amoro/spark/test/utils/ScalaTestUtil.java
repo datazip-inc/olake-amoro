@@ -18,14 +18,14 @@
 
 package org.apache.amoro.spark.test.utils;
 
-import scala.collection.JavaConverters;
 import scala.collection.Seq;
+import scala.jdk.CollectionConverters;
 
 import java.util.List;
 
 public class ScalaTestUtil {
 
   public static <T> Seq<T> seq(List<T> values) {
-    return JavaConverters.asScalaBuffer(values).toList();
+    return CollectionConverters.ListHasAsScala(values).asScala();
   }
 }

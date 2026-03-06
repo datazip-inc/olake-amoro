@@ -44,9 +44,9 @@ help:
 	@echo "  make stop-deps      Stop Postgres and Minio"
 	@echo "  make ams-start      Start AMS locally (no debugger)"
 	@echo "  make ams-debug      Start AMS locally with JDWP on port 5005, then attach IDE"
-	@echo "  make setup-debug-mode  One-command debug setup (deps + build + lib sync)"
+	@echo "  make setup-debug-mode  One-command debug setup (deps + build + install to ~/.m2 + lib sync)"
 	@echo "  make teardown-debug-mode  One-command debug teardown (stop deps + cleanup)"
-	@echo "  make prepare-debug-runtime  Build tar and sync optimizer lib in one step"
+	@echo "  make prepare-debug-runtime  Build+install all modules to ~/.m2, then sync optimizer lib"
 	@echo "  make prepare-optimizer-lib  Extract dist tar and sync only lib/ to dist/src/main/amoro-bin"
 	@echo "  make teardown      Remove everything (Kind cluster + services + volumes)"
 	@echo "  make logs          View Fusion logs"
@@ -98,15 +98,19 @@ stop-deps:
 	@docker compose -f docker/kind/docker-compose.yml --profile dev down
 
 prepare-debug-runtime:
-	@echo "Building distribution tar (mvn clean package -DskipTests)..."
-	@mvn clean package -DskipTests
+	@echo "Cleaning up stale optimizer logs (prevents RAT license check failure)..."
+	@rm -rf "$(AMORO_BIN_HOME)/logs/optimizer-local-test-"*
+	@echo "Building and installing all modules to local Maven repo (~/.m2)..."
+	@./mvnw clean install -DskipTests -Drat.skip=true -Dspotless.skip=true -Dcheckstyle.skip=true -B -ntp
 	@$(MAKE) prepare-optimizer-lib
 
 setup-debug-mode:
-	@echo "Setting up debug mode (deps + dist build + optimizer lib sync)..."
+	@echo "Setting up debug mode (deps + build + install to ~/.m2 + lib sync)..."
 	@$(MAKE) start-deps
 	@$(MAKE) prepare-debug-runtime
-	@echo "Setup complete. Next: run 'AmoroServiceContainer' from launch.json."
+	@echo ""
+	@echo "Setup complete."
+	@echo "Next: reload VS Code Java project, then run 'AmoroServiceContainer' from launch.json."
 
 teardown-debug-mode:
 	@echo "Tearing down debug mode (deps + extracted runtime cleanup)..."

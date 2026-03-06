@@ -19,9 +19,6 @@
 package org.apache.amoro.spark
 
 import org.apache.spark.sql.SparkSessionExtensions
-import org.apache.spark.sql.catalyst.analysis.{ProcedureArgumentCoercion, ResolveProcedures}
-import org.apache.spark.sql.catalyst.optimizer._
-import org.apache.spark.sql.catalyst.parser.extensions.IcebergSparkSqlExtensionsParser
 import org.apache.spark.sql.execution.datasources.v2.{ExtendedDataSourceV2Strategy, MixedFormatExtendedDataSourceV2Strategy}
 
 import org.apache.amoro.spark.sql.catalyst.analysis._
@@ -57,18 +54,6 @@ class MixedFormatSparkExtensions extends (SparkSessionExtensions => Unit) {
 
     // mixed-format strategy rules
     extensions.injectPlannerStrategy { spark => execution.ExtendedMixedFormatStrategy(spark) }
-
-    // === Iceberg extensions ===
-
-    // parser extensions
-    extensions.injectParser { case (_, parser) => new IcebergSparkSqlExtensionsParser(parser) }
-
-    // analyzer extensions
-    extensions.injectResolutionRule { spark => ResolveProcedures(spark) }
-    extensions.injectResolutionRule { _ => ProcedureArgumentCoercion }
-
-    // optimizer extensions
-    extensions.injectOptimizerRule { _ => ReplaceStaticInvoke }
   }
 
 }
