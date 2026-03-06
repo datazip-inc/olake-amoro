@@ -15,6 +15,8 @@
   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
+  ~
+  ~ Modified by Datazip Inc. in 2026
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -70,8 +72,8 @@
     </issueManagement>
 
     <properties>
-        <java.source.version>11</java.source.version>
-        <java.target.version>11</java.target.version>
+        <java.source.version>17</java.source.version>
+        <java.target.version>17</java.target.version>
         <maven.compiler.source>${java.source.version}</maven.compiler.source>
         <maven.compiler.target>${java.target.version}</maven.compiler.target>
         <maven.version>3.9.11</maven.version>
@@ -109,8 +111,8 @@
         <hadoop-client-api.artifact>hadoop-client-api</hadoop-client-api.artifact>
         <hadoop-client-runtime.artifact>hadoop-client-runtime</hadoop-client-runtime.artifact>
         <kerby.version>2.1.1</kerby.version>
-        <scala.version>2.12.15</scala.version>
-        <scala.binary.version>2.12</scala.binary.version>
+        <scala.version>2.13.18</scala.version>
+        <scala.binary.version>2.13</scala.binary.version>
         <args4j.version>2.33</args4j.version>
         <slf4j.version>2.0.17</slf4j.version>
         <log4j.version>2.20.0</log4j.version>
@@ -131,7 +133,7 @@
         <orc-core.version>1.9.7</orc-core.version>
         <awssdk.version>2.24.12</awssdk.version>
         <aliyun-sdk-oss.version>3.10.2</aliyun-sdk-oss.version>
-        <spark.version>3.5.7</spark.version>
+        <spark.version>3.5.8</spark.version>
         <spark.major.version>3.5</spark.major.version>
         <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
         <caffeine.version>2.9.3</caffeine.version>
@@ -1853,15 +1855,6 @@
         </profile>
 
         <profile>
-            <id>java11</id>
-            <activation>
-                <jdk>[11,)</jdk>
-            </activation>
-            <properties>
-                <java.target.version>11</java.target.version>
-            </properties>
-        </profile>
-        <profile>
             <id>spark-3.3</id>
             <properties>
                 <spark.version>3.3.4</spark.version>
@@ -1878,7 +1871,7 @@
         <profile>
             <id>spark-3.5</id>
             <properties>
-                <spark.version>3.5.7</spark.version>
+                <spark.version>3.5.8</spark.version>
                 <spark.major.version>3.5</spark.major.version>
             </properties>
         </profile>
@@ -1892,7 +1885,7 @@
         <profile>
             <id>scala-2.13</id>
             <properties>
-                <scala.version>2.13.8</scala.version>
+                <scala.version>2.13.18</scala.version>
                 <scala.binary.version>2.13</scala.binary.version>
                 <!-- paimon-1.2.0 does not support scala-2.13 and datasource lookup will cause UT failre -->
                 <paimon.version>1.1.1</paimon.version>

@@ -15,6 +15,24 @@
 # limitations under the License.
 #
 
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Modified by Datazip Inc. in 2026
+
 services:
   fusion:
     image: olakego/fusion:latest
@@ -315,30 +333,16 @@ services:
           exit 0
         fi
 
-        # ---- Per-node check: only import where missing ----
-        NEED_IMPORT=""
-        for NODE in $$NODES; do
-          if docker exec $$NODE ctr --namespace=k8s.io images ls -q 2>/dev/null | grep -q "$$IMAGE_REF"; then
-            echo "==> $$NODE: image already present — skipping."
-          else
-            NEED_IMPORT="$$NEED_IMPORT $$NODE"
-          fi
-        done
-
-        if [ -z "$$NEED_IMPORT" ]; then
-          echo "==> Image present on all workers — nothing to do."
-          exit 0
-        fi
-
-        # ---- Save image to tmpfs-backed tarball (fast RAM I/O) ----
+        # ---- Always import to refresh mutable tags like ":latest" ----
+        # This prevents stale runtime images (e.g. old Java version) from being reused.
         echo "==> Saving $$IMAGE to tarball (tmpfs)..."
         docker save $$IMAGE -o /tmp/spark-optimizer.tar
         echo "   Saved ($$(du -h /tmp/spark-optimizer.tar | cut -f1))."
 
-        # ---- Parallel import into workers that need it ----
-        echo "==> Importing into Kind worker nodes (parallel)..."
+        # ---- Parallel import into all workers ----
+        echo "==> Importing into Kind worker nodes (parallel, force refresh)..."
         PIDS=""
-        for NODE in $$NEED_IMPORT; do
+        for NODE in $$NODES; do
           echo "   Starting import into $$NODE..."
           (cat /tmp/spark-optimizer.tar | docker exec -i $$NODE ctr --namespace=k8s.io images import - && \
             echo "   $$NODE: done.") &

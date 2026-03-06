@@ -14,15 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-# Makefile for Fusion + Kind (Spark on Kubernetes)
-#
-# Usage:
-#   make setup-fusion  - One command to start everything (Kind + Docker services + optimizer)
-#   make stop-fusion   - Stop Docker services (Kind cluster persists)
-#   make debug-fusion  - Start everything with AMS JDWP debugger enabled
-#   make teardown     - Remove everything (Kind cluster + Docker services + volumes)
-#   make status       - Show status of cluster and Fusion
+# Modified by Datazip Inc. in 2026
 
 COMPOSE_DIR := docker/kind
 KIND_CLUSTER := fusion-cluster
