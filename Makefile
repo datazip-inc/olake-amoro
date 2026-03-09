@@ -25,7 +25,7 @@ AMORO_DIST_TAR := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
 AMORO_RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT
 AMORO_BIN_HOME := $(CURDIR)/dist/src/main/amoro-bin
 
-.PHONY: setup-fusion stop-fusion restart-fusion debug-fusion teardown logs status pods shell alias help debug-local stop-local start-deps stop-deps ams-debug ams-start ams-dist prepare-optimizer-lib prepare-debug-runtime setup-debug-mode teardown-debug-mode
+.PHONY: setup-fusion stop-fusion restart-fusion debug-fusion teardown logs status pods shell alias help debug-local stop-local start-deps stop-deps ams-debug ams-start ams-dist prepare-optimizer-lib prepare-debug-runtime setup-debug-mode teardown-debug-mode sync-frontend
 
 # Default target
 .DEFAULT_GOAL := help
@@ -48,6 +48,7 @@ help:
 	@echo "  make teardown-debug-mode  One-command debug teardown (stop deps + cleanup)"
 	@echo "  make prepare-debug-runtime  Build+install all modules to ~/.m2, then sync optimizer lib"
 	@echo "  make prepare-optimizer-lib  Extract dist tar and sync only lib/ to dist/src/main/amoro-bin"
+	@echo "  make sync-frontend  Sync built frontend assets to target/ (fixes blank UI without rebuild)"
 	@echo "  make teardown      Remove everything (Kind cluster + services + volumes)"
 	@echo "  make logs          View Fusion logs"
 	@echo "  make status        Show cluster and service status"
@@ -130,6 +131,18 @@ prepare-optimizer-lib:
 	@rm -rf "$(AMORO_BIN_HOME)/lib"
 	@cp -R "$(AMORO_RUNTIME_HOME)/lib" "$(AMORO_BIN_HOME)/lib"
 	@echo "Synced optimizer libs to: $(AMORO_BIN_HOME)/lib"
+
+sync-frontend:
+	@echo "Syncing frontend assets from src/main/resources/static → target/classes/static ..."
+	@SRC=amoro-web/src/main/resources/static; \
+	DST=amoro-web/target/classes/static; \
+	if [ ! -d "$$SRC" ]; then \
+		echo "ERROR: $$SRC not found. Run 'pnpm build' inside amoro-web/ first."; \
+		exit 1; \
+	fi; \
+	mkdir -p "$$DST"; \
+	cp -r "$$SRC"/. "$$DST"/
+	@echo "Done. Refresh http://localhost:1630 in your browser."
 
 teardown:
 	@echo "Removing Kind clusters..."
