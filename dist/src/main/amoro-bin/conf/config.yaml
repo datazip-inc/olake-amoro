@@ -14,9 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# --- Config for running AMS from code (IDE / mvn) ---
-# Postgres at localhost:5432; server binds to 0.0.0.0 so UI is at http://localhost:1630
-#
+# Modified by Datazip Inc. in 2026
 
 ams:
   admin-username: admin
