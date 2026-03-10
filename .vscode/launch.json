@@ -25,7 +25,6 @@
       "type": "java",
       "name": "AmoroServiceContainer",
       "request": "launch",
-      "preLaunchTask": "Verify Java 17",
       "mainClass": "org.apache.amoro.server.AmoroServiceContainer",
       "projectName": "amoro-ams",
       "cwd": "${workspaceFolder}",
@@ -33,9 +32,12 @@
       "vmArgs": "-Dfile.encoding=UTF-8 -Darrow.memory.allocator=unsafe -XX:+UseZGC -XX:CompileCommand=exclude,io/netty/buffer/PoolChunkList.allocate -XX:CompileCommand=exclude,io/netty/buffer/PoolArena.allocate --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED",
       "env": {
         "AMORO_HOME": "${workspaceFolder}/dist/src/main/amoro-bin",
-        "AMORO_CONF_DIR": "${workspaceFolder}/dist/src/main/amoro-bin/conf",
+        "AMORO_CONF_DIR": "${workspaceFolder}/docker/kind",
+        "AMORO_PLUGIN_DIR": "${workspaceFolder}/dist/src/main/amoro-bin",
         "CONSOLE_LOG_LEVEL": "info",
-        "OPTIMIZER_JAVA_OPTS": "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006"
+        "OPTIMIZER_JAVA_OPTS": "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006",
+        "AMS_SERVER__EXPOSE__HOST": "127.0.0.1",
+        "AMS_DATABASE_URL": "jdbc:postgresql://localhost:5432/iceberg"
       }
     },
     {
