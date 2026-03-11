@@ -33,7 +33,6 @@
       "env": {
         "AMORO_HOME": "${workspaceFolder}/dist/src/main/amoro-bin",
         "AMORO_CONF_DIR": "${workspaceFolder}/docker/kind",
-        "AMORO_PLUGIN_DIR": "${workspaceFolder}/dist/src/main/amoro-bin",
         "CONSOLE_LOG_LEVEL": "info",
         "OPTIMIZER_JAVA_OPTS": "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006",
         "AMS_SERVER__EXPOSE__HOST": "127.0.0.1",
