@@ -131,6 +131,7 @@ ams:
     local:
       using-session-catalog-for-hive: false
       spark.sql.iceberg.handle-timestamp-without-timezone: false
+      spark.sql.codegen.wholeStage: false
 
 # ---------------------------------------------------------------------------
 # Optimizer Containers

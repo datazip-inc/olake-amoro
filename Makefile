@@ -18,14 +18,11 @@
 
 COMPOSE_DIR := docker/kind
 KIND_CLUSTER := fusion-cluster
-KUBECTL := kubectl --context kind-$(KIND_CLUSTER)
-AMORO_DEBUG_PORT ?= 5005
-AMORO_DEBUG_SUSPEND ?= n
 AMORO_DIST_TAR := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
 AMORO_RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT
 AMORO_BIN_HOME := $(CURDIR)/dist/src/main/amoro-bin
 
-.PHONY: setup-fusion stop-fusion restart-fusion debug-fusion teardown logs status pods shell alias help debug-local stop-local start-deps stop-deps ams-debug ams-start ams-dist prepare-optimizer-lib prepare-debug-runtime setup-debug-mode teardown-debug-mode sync-frontend
+.PHONY: start-fusion-docker clean-fusion-docker start-deps stop-deps prepare-optimizer-lib prepare-debug-runtime setup-debug-mode clean-debug-mode sync-frontend help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -34,50 +31,32 @@ help:
 	@echo "Fusion + Kind (Spark on Kubernetes)"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make setup-fusion   Start everything (Kind cluster + all services + optimizer)"
-	@echo "  make stop-fusion    Stop Docker services (Kind cluster persists)"
-	@echo "  make restart-fusion Restart Docker services"
-	@echo "  make debug-fusion   Start with Java debugger on localhost:$(AMORO_DEBUG_PORT)"
-	@echo "  make debug-local    Start Fusion with local optimizer, Postgres, Minio in debug mode"
-	@echo "  make stop-local     Stop the local debug environment"
-	@echo "  make start-deps     Start Postgres and Minio for IDE debugging"
-	@echo "  make stop-deps      Stop Postgres and Minio"
-	@echo "  make ams-start      Start AMS locally (no debugger)"
-	@echo "  make ams-debug      Start AMS locally with JDWP on port 5005, then attach IDE"
-	@echo "  make setup-debug-mode  One-command debug setup (deps + build + install to ~/.m2 + lib sync)"
-	@echo "  make teardown-debug-mode  One-command debug teardown (stop deps + cleanup)"
-	@echo "  make prepare-debug-runtime  Build+install all modules to ~/.m2, then sync optimizer lib"
-	@echo "  make prepare-optimizer-lib  Extract dist tar and sync only lib/ to dist/src/main/amoro-bin"
-	@echo "  make sync-frontend  Sync built frontend assets to target/ (fixes blank UI without rebuild)"
-	@echo "  make teardown      Remove everything (Kind cluster + services + volumes)"
-	@echo "  make logs          View Fusion logs"
-	@echo "  make status        Show cluster and service status"
-	@echo "  make pods          List Spark pods in Kubernetes"
-	@echo "  make shell         Shell into Fusion container"
-	@echo "  make alias         Set default namespace to spark"
+	@echo "  make start-fusion-docker   Start everything (Kind cluster + all services + optimizer) *Before running make sure you have installed KIND*"
+	@echo "  make clean-fusion-docker   Remove everything (Kind cluster + services + volumes)"
+	@echo "  make start-deps            Start Postgres and Minio for IDE debugging"
+	@echo "  make stop-deps             Stop Postgres and Minio"
+	@echo "  make setup-debug-mode      deps + build + install to ~/.m2 + lib sync"
+	@echo "  make clean-debug-mode      Stop deps + cleanup extracted runtime"
+	@echo "  make sync-frontend         Sync built frontend assets to target/ (fixes blank UI without rebuild)"
 	@echo ""
 	@echo "Access:"
 	@echo "  Fusion Web UI : http://localhost:1630  (admin / password)"
-	@echo "  MinIO Console: http://localhost:9001  (admin / password)"
+	@echo "  MinIO Console : http://localhost:9001  (admin / password)"
 	@echo ""
 
-setup-fusion:
+start-fusion-docker:
 	@echo "Starting Fusion (Kind cluster + all services)..."
 	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile prod up -d
 	@echo ""
 	@echo "Exporting Kind kubeconfig to host..."
 	@kind export kubeconfig --name $(KIND_CLUSTER) 2>/dev/null
-	@echo ""
-	@echo "Follow progress:  make logs"
-	@echo "Check status:     make status"
 
-
-teardown:
+clean-fusion-docker:
 	@echo "Removing Kind clusters..."
 	@kind delete cluster --name $(KIND_CLUSTER) 2>/dev/null 
 	@kind delete cluster --name fusion-spark-cluster 2>/dev/null
 	@echo "Removing Docker services and volumes..."
-	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml down -v
+	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile prod down -v
 	@echo "Teardown complete."
 
 start-deps:
@@ -114,9 +93,9 @@ setup-debug-mode:
 	@$(MAKE) prepare-debug-runtime
 	@echo ""
 	@echo "Setup complete."
-	@echo "Next: reload VS Code Java project, then run 'AmoroServiceContainer' from launch.json."
+	@echo "Next: reload VS Code Java project, then run 'AmoroServiceContainer' from launch.json. Follow .vscode/debug.md"
 
-teardown-debug-mode:
+clean-debug-mode:
 	@echo "Tearing down debug mode (deps + extracted runtime cleanup)..."
 	@$(MAKE) stop-deps
 	@rm -rf "$(AMORO_RUNTIME_HOME)"
