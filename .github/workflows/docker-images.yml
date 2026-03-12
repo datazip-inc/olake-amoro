@@ -22,9 +22,6 @@
 name: Publish Docker Image
 
 on:
-  push:
-    branches:
-      - feat/fusion-releaser
   workflow_call:
     inputs:
       tag:
