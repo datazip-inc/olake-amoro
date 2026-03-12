@@ -44,8 +44,13 @@ jobs:
           CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD)
           DATAZIP_MODIFICATION_YEAR_REGEX="Modified by Datazip Inc\. in [0-9]{4}"
           NOT_MODIFIED_FILES=""
+          LICENSE_REGEX="Licensed to the Apache Software Foundation|Apache License|SPDX-License-Identifier"
           for file in $CHANGED_FILES; do
             if [[ ! -f "$file" ]]; then
+              continue
+            fi
+
+            if ! head -40 "$file" | grep -q -E "$LICENSE_REGEX"; then
               continue
             fi
 

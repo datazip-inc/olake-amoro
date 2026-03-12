@@ -22,9 +22,10 @@
 name: Publish Docker Image
 
 on:
-  workflow_call:
+  push:
     branches:
       - feat/fusion-releaser
+  workflow_call:
     inputs:
       tag:
         description: 'Version tag for the image (e.g. v1.0.0).'
