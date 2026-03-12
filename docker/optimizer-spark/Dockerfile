@@ -27,14 +27,10 @@ ARG TARGETARCH
 USER root
 
 RUN apt-get update \
-    && apt-get install -y wget openjdk-17-jre-headless \
+    && apt-get install -y --no-install-recommends wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Force Spark optimizer runtime to Java 17 and expose a stable JAVA_HOME path.
-RUN rm -rf /opt/java/openjdk \
-    && mkdir -p /opt/java \
-    && ln -sfn /usr/lib/jvm/java-17-openjdk-${TARGETARCH} /opt/java/openjdk \
-    && test -x /opt/java/openjdk/bin/java
+# The apache/spark base image already ships Java 17 at /opt/java/openjdk.
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
