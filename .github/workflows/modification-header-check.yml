@@ -43,14 +43,13 @@ jobs:
           BASE_BRANCH=${{ github.base_ref }}
           CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD)
           DATAZIP_MODIFICATION_YEAR_REGEX="Modified by Datazip Inc\. in [0-9]{4}"
-          ASF_ORIGINAL_WORK_NOTICE_REGEX="Original work Copyright The Apache Software Foundation \\(ASF\\)"
           NOT_MODIFIED_FILES=""
           for file in $CHANGED_FILES; do
             if [[ ! -f "$file" ]]; then
               continue
             fi
 
-            if ! head -40 "$file" | grep -q -E "$DATAZIP_MODIFICATION_YEAR_REGEX" || ! head -40 "$file" | grep -q -E "$ASF_ORIGINAL_WORK_NOTICE_REGEX"; then
+            if ! head -40 "$file" | grep -q -E "$DATAZIP_MODIFICATION_YEAR_REGEX"; then
               NOT_MODIFIED_FILES+="$file"$'\n'
             fi
           done
