@@ -22,7 +22,7 @@
 
 ## Setup Dist Runtime For Local Optimizer
 1. Update Java 17 path for your machine in `.vscode/settings.json` (or set Java 17 in user settings).
-2. Run `make setup-debug-mode` (starts local deps, runs `mvn clean package -DskipTests`, extracts dist tar, and syncs only `lib/` to `dist/src/main/amoro-bin/lib`).
+2. Run `make setup-debug-mode` (starts local deps, runs `mvn clean install -DskipTests`, extracts dist tar, and syncs only `lib/` to `dist/src/main/amoro-bin/lib`).
 3. Start AMS from `launch.json` using `AmoroServiceContainer` (or `AmoroServiceContainer (Optimizer Debug)` when optimizer debug flags are needed).
 4. Add/create an optimizer through UI (local container/group).
 5. Attach optimizer debugger using `OptimizerStandalone` from `launch.json` (default port `5006`).
