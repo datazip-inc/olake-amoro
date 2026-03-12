@@ -22,6 +22,7 @@ ams:
   server-bind-host: "0.0.0.0"
   # Static IP on iceberg-net so both the local optimizer and K8s Spark pods can
   # reach the thrift optimizing service without any manual IP edits.
+  # In debug mode this is overridden to 127.0.0.1 via AMS_SERVER__EXPOSE__HOST in launch.json.
   server-expose-host: "172.30.0.10"
 
   thrift-server:
@@ -118,6 +119,7 @@ ams:
     connection-pool-max-total: 20
     connection-pool-max-idle: 16
     connection-pool-max-wait-millis: 30000
+    auto-create-tables: true
 
   terminal:
     backend: local
@@ -129,6 +131,7 @@ ams:
     local:
       using-session-catalog-for-hive: false
       spark.sql.iceberg.handle-timestamp-without-timezone: false
+      spark.sql.codegen.wholeStage: false
 
 # ---------------------------------------------------------------------------
 # Optimizer Containers
@@ -145,8 +148,7 @@ ams:
 containers:
   - name: localContainer
     container-impl: org.apache.amoro.server.manager.LocalOptimizerContainer
-    properties:
-      export.JAVA_HOME: "/opt/java/openjdk"   # eclipse-temurin JDK path
+    properties: {}
 
   - name: sparkContainer
     container-impl: org.apache.amoro.server.manager.SparkOptimizerContainer

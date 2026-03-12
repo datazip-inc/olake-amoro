@@ -127,7 +127,7 @@
         <cglib.version>2.2.2</cglib.version>
         <curator.version>5.7.0</curator.version>
         <mockito.version>4.11.0</mockito.version>
-        <parquet-jackson.version>1.13.1</parquet-jackson.version>
+        <parquet-jackson.version>1.15.2</parquet-jackson.version>
         <parquet-avro.version>1.15.2</parquet-avro.version>
         <mysql-jdbc.version>8.0.33</mysql-jdbc.version>
         <orc-core.version>1.9.7</orc-core.version>
@@ -398,7 +398,6 @@
                 <version>${parquet-avro.version}</version>
             </dependency>
 
-            <!-- TODO: Remove this parquet-jackson when upgrade JDK to 17 or higher -->
             <dependency>
                 <groupId>org.apache.parquet</groupId>
                 <artifactId>parquet-jackson</artifactId>
@@ -1540,18 +1539,12 @@
                             <importOrder>
                                 <order>,javax,java,\\#</order>
                             </importOrder>
-                            <licenseHeader>
-                                <file>tools/maven/copyright.txt</file>
-                            </licenseHeader>
                         </java>
                         <scala>
                             <scalafmt>
                                 <scalaMajorVersion>2.12</scalaMajorVersion>
                                 <file>tools/maven/scalafmt.conf</file>
                             </scalafmt>
-                            <licenseHeader>
-                                <file>tools/maven/copyright.txt</file>
-                            </licenseHeader>
                         </scala>
                         <pom>
                             <includes>
@@ -1624,6 +1617,7 @@
                             <exclude>**/components.d.ts</exclude>
                             <exclude>**/Chart.lock</exclude>
                             <exclude>dev/deps/**</exclude>
+                            <exclude>docker/kind/data/**</exclude>
                             <exclude>site/**</exclude>
                             <!-- artifacts created during release process -->
                             <exclude>release/**</exclude>
