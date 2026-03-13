@@ -22,9 +22,6 @@
 name: Publish Docker Image
 
 on:
-  push:
-    branches:
-      - "feat/fusion-releaser" # TODO: remove before merge
   workflow_call:
     inputs:
       tag:
