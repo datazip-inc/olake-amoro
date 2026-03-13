@@ -78,9 +78,7 @@ public class DriverLogger implements AutoCloseable {
       ensureWriter();
       String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
       String logLine =
-          String.format(
-              "%s %-5s [DRIVER|P:%d|Table:%s] - %s",
-              timestamp, level, processId, tableName != null ? tableName : "unknown", message);
+          String.format("%s %-5s [DRIVER|P:%d] - %s", timestamp, level, processId, message);
       writer.println(logLine);
 
       if (throwable != null) {

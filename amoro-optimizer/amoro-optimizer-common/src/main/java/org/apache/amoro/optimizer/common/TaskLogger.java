@@ -83,14 +83,7 @@ public class TaskLogger implements AutoCloseable, Serializable {
       ensureWriter();
       String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
       String logLine =
-          String.format(
-              "%s %-5s [P:%d|T:%d|Table:%s] - %s",
-              timestamp,
-              level,
-              processId,
-              taskId,
-              tableName != null ? tableName : "unknown",
-              message);
+          String.format("%s %-5s [P:%d|T:%d] - %s", timestamp, level, processId, taskId, message);
       writer.println(logLine);
 
       if (throwable != null) {

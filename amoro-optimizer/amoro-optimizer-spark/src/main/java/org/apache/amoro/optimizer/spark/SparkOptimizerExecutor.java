@@ -18,8 +18,6 @@
 
 package org.apache.amoro.optimizer.spark;
 
-import java.util.List;
-
 import org.apache.amoro.api.OptimizingTask;
 import org.apache.amoro.api.OptimizingTaskResult;
 import org.apache.amoro.optimizer.common.DriverLogger;
@@ -34,6 +32,8 @@ import org.apache.amoro.utils.SerializationUtil;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * The {@code SparkOptimizerExecutor} takes OptimizingTask from AMS and wraps it as a spark job,
@@ -62,10 +62,10 @@ public class SparkOptimizerExecutor extends OptimizerExecutor {
 
     try (DriverLogger driverLogger = new DriverLogger(processId, tableName);
         TaskLogger taskLogger = new TaskLogger(processId, taskId, tableName)) {
-      driverLogger.info("Starting compaction process for table: %s", tableName);
+      driverLogger.info("Starting compaction process");
       driverLogger.info("Process ID: %d, Task ID: %d, Thread: %s", processId, taskId, threadName);
 
-      taskLogger.info("Starting task execution for table: %s", tableName);
+      taskLogger.info("Starting task execution");
       taskLogger.info("Task ID: %s, Thread: %s", task.getTaskId(), threadName);
       ImmutableList<OptimizingTask> of = ImmutableList.of(task);
       jsc.setJobDescription(jobDescription(task));
