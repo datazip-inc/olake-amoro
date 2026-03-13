@@ -44,6 +44,9 @@ configure_jvm_options() {
 
 configure_jvm_options
 
+# creating logs directory with write permissions
+mkdir -p /usr/local/amoro/logs/compaction
+chmod 777 /usr/local/amoro/logs/compaction
 
 if [ $1 == "help" ]; then
   printf "Usage: $(basename $0) [ams|optimizer] [args]\n"

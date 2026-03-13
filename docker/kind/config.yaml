@@ -176,3 +176,11 @@ containers:
       spark-conf.spark.kubernetes.driver.secretKeyRef.AWS_SECRET_ACCESS_KEY: "fusion-s3-credentials:secret-access-key"
       spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_ACCESS_KEY_ID: "fusion-s3-credentials:access-key-id"
       spark-conf.spark.kubernetes.executor.secretKeyRef.AWS_SECRET_ACCESS_KEY: "fusion-s3-credentials:secret-access-key"
+      # mounting shared log volume for persistent task logs
+      # but, why is this required ?
+      spark-conf.spark.kubernetes.driver.volumes.hostPath.amoro-logs.mount.path: "/mnt/amoro-logs"
+      spark-conf.spark.kubernetes.driver.volumes.hostPath.amoro-logs.mount.readOnly: "false"
+      spark-conf.spark.kubernetes.driver.volumes.hostPath.amoro-logs.options.path: "/mnt/amoro-logs"
+      spark-conf.spark.kubernetes.executor.volumes.hostPath.amoro-logs.mount.path: "/mnt/amoro-logs"
+      spark-conf.spark.kubernetes.executor.volumes.hostPath.amoro-logs.mount.readOnly: "false"
+      spark-conf.spark.kubernetes.executor.volumes.hostPath.amoro-logs.options.path: "/mnt/amoro-logs"

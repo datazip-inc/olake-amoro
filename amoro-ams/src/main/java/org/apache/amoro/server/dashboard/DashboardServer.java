@@ -43,6 +43,7 @@ import org.apache.amoro.server.catalog.CatalogManager;
 import org.apache.amoro.server.dashboard.controller.ApiTokenController;
 import org.apache.amoro.server.dashboard.controller.CatalogController;
 import org.apache.amoro.server.dashboard.controller.HealthCheckController;
+import org.apache.amoro.server.dashboard.controller.LogController;
 import org.apache.amoro.server.dashboard.controller.LoginController;
 import org.apache.amoro.server.dashboard.controller.OptimizerController;
 import org.apache.amoro.server.dashboard.controller.OptimizerGroupController;
@@ -90,6 +91,7 @@ public class DashboardServer {
   private final VersionController versionController;
   private final OverviewController overviewController;
   private final ApiTokenController apiTokenController;
+  private final LogController logController;
 
   private final PasswdAuthenticationProvider basicAuthProvider;
   private final TokenAuthenticationProvider jwtAuthProvider;
@@ -120,6 +122,7 @@ public class DashboardServer {
     this.overviewController = new OverviewController(manager);
     APITokenManager apiTokenManager = new APITokenManager();
     this.apiTokenController = new ApiTokenController(apiTokenManager);
+    this.logController = new LogController();
 
     String authType = serviceConfig.get(AmoroManagementConf.HTTP_SERVER_REST_AUTH_TYPE);
     this.basicAuthProvider =
@@ -395,6 +398,14 @@ public class DashboardServer {
             get("/info", apiTokenController::getApiTokens);
             post("/calculate/signature", apiTokenController::calculateSignature);
             post("/calculate/encryptString", apiTokenController::getEncryptStringFromQueryParam);
+          });
+
+      // log apis
+      path(
+          "/logs",
+          () -> {
+            get("/driver/{processId}", logController::getDriverLog);
+            get("/tasks/{processId}/{taskId}", logController::getTaskLog);
           });
     };
   }
