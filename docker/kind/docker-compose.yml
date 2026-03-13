@@ -44,8 +44,11 @@ services:
       AWS_SECRET_ACCESS_KEY: password
     volumes:
       - ./config.yaml:/usr/local/amoro/conf/config.yaml:ro
+      - ../../dist/src/main/amoro-bin/conf/log4j2.xml:/usr/local/amoro/conf/log4j2.xml:ro
+      - ../../dist/src/main/amoro-bin/conf/jvm.properties:/usr/local/amoro/conf/jvm.properties:ro
       - kind-kubeconfig:/root/.kube:ro
       - spark-home:/opt/spark:ro
+      - ./logs/amoro:/usr/local/amoro/logs
     command: ["/entrypoint.sh", "ams"]
     tty: true
     stdin_open: true
