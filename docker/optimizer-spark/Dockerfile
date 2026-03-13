@@ -17,8 +17,12 @@
 # Modified by Datazip Inc. in 2026
 
 ARG SPARK_VERSION=3.5.8
+# Use the explicit java17 tag to guarantee Java 17 runtime.
+# apache/spark:3.5.8-java17 and apache/spark:3.5.8 share the same digest today,
+# but the plain short tag can resolve to a cached Java 11 layer on Kubernetes nodes.
+ARG SPARK_JAVA_TAG=${SPARK_VERSION}-java17
 
-FROM apache/spark:${SPARK_VERSION}
+FROM apache/spark:${SPARK_JAVA_TAG}
 
 ARG MAVEN_MIRROR=https://repo.maven.apache.org/maven2
 ARG OPTIMIZER_JOB=optimizer-job.jar
@@ -30,7 +34,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends wget \
     && rm -rf /var/lib/apt/lists/*
 
-# The apache/spark base image already ships Java 17 at /opt/java/openjdk.
+# apache/spark:*-java17 ships Java 17 at /opt/java/openjdk.
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
