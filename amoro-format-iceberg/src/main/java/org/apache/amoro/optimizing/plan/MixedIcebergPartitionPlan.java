@@ -201,23 +201,6 @@ public class MixedIcebergPartitionPlan extends AbstractPartitionPlan {
     }
 
     @Override
-    public boolean isMinorNecessary() {
-      if (keyedTable) {
-        int smallFileCount = fragmentFileCount + equalityDeleteFileCount;
-        int baseSplitCount = getBaseSplitCount();
-        if (smallFileCount >= Math.max(baseSplitCount + 1, config.getMinorLeastFileCount())) {
-          return true;
-        } else if ((smallFileCount > baseSplitCount || hasChangeFiles) && reachMinorInterval()) {
-          return true;
-        } else {
-          return hasChangeFiles && reachBaseRefreshInterval();
-        }
-      } else {
-        return super.isMinorNecessary();
-      }
-    }
-
-    @Override
     public boolean segmentShouldRewritePos(DataFile dataFile, List<ContentFile<?>> deletes) {
       if (deletes.stream()
           .anyMatch(
@@ -244,14 +227,6 @@ public class MixedIcebergPartitionPlan extends AbstractPartitionPlan {
       } else {
         return 1;
       }
-    }
-
-    @Override
-    public boolean isFullNecessary() {
-      if (!reachFullInterval()) {
-        return false;
-      }
-      return anyDeleteExist() || fragmentFileCount > getBaseSplitCount() || hasChangeFiles;
     }
 
     @Override

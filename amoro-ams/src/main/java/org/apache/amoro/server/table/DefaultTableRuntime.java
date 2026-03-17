@@ -120,7 +120,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
     }
     this.optimizingProcess = optimizingProcess;
     if (this.optimizingProcess.getStatus() == ProcessStatus.SUCCESS) {
-      completeProcess(true);
+      completeProcess(true, optimizingProcess.getTargetSnapshotId());
     }
   }
 
@@ -405,8 +405,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
         .commit();
   }
 
-  public void completeProcess(boolean success) {
-    OptimizingStatus originalStatus = getOptimizingStatus();
+  public void completeProcess(boolean success, long lastOptimizedSnapshotId) {
     OptimizingType processType = optimizingProcess.getOptimizingType();
 
     store()
@@ -414,14 +413,21 @@ public class DefaultTableRuntime extends AbstractTableRuntime
         .updateState(
             OPTIMIZING_STATE_KEY,
             state -> {
-              state.setLastOptimizedSnapshotId(optimizingProcess.getTargetSnapshotId());
-              state.setLastOptimizedChangeSnapshotId(optimizingProcess.getTargetChangeSnapshotId());
+              state.setLastOptimizedSnapshotId(lastOptimizedSnapshotId);
+              state.setLastOptimizedChangeSnapshotId(
+                  optimizingProcess.getTargetChangeSnapshotId());
+              // Use the actual completion time, not planTime.
+              // planTime is when planning started; the compaction may take minutes.
+              // Using planTime would let the cron fire again immediately on the next tick
+              // (e.g. cron "* * * * *" with a 2-min compaction: nextFire(planTime) is
+              // already in the past → hasFired = true → instant re-schedule).
+              long completionTime = System.currentTimeMillis();
               if (processType == OptimizingType.MINOR) {
-                state.setLastMinorOptimizingTime(optimizingProcess.getPlanTime());
+                state.setLastMinorOptimizingTime(completionTime);
               } else if (processType == OptimizingType.MAJOR) {
-                state.setLastMajorOptimizingTime(optimizingProcess.getPlanTime());
+                state.setLastMajorOptimizingTime(completionTime);
               } else if (processType == OptimizingType.FULL) {
-                state.setLastFullOptimizingTime(optimizingProcess.getPlanTime());
+                state.setLastFullOptimizingTime(completionTime);
               }
               return state;
             })
@@ -538,6 +544,11 @@ public class DefaultTableRuntime extends AbstractTableRuntime
   }
 
   private boolean refreshSnapshots(AmoroTable<?> amoroTable, TableRuntimeOptimizingState state) {
+    OptimizingConfig optimizingConfig = this.getOptimizingConfig();
+    if (!optimizingConfig.isEnabled()) {
+      return true;
+    }
+
     MixedTable table = (MixedTable) amoroTable.originalTable();
     tableSummaryMetrics.refreshSnapshots(table);
     long lastSnapshotId = state.getCurrentSnapshotId();

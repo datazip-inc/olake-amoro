@@ -112,21 +112,21 @@ public class TableProperties {
       "self-optimizing.minor.trigger.file-count";
   public static final int SELF_OPTIMIZING_MINOR_TRIGGER_FILE_CNT_DEFAULT = 12;
 
-  public static final String SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL =
-      "self-optimizing.minor.trigger.interval";
-  public static final int SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL_DEFAULT = 3600000; // 1 h
+  public static final String SELF_OPTIMIZING_MINOR_TRIGGER_CRON =
+      "self-optimizing.minor.trigger.cron";
+  public static final String SELF_OPTIMIZING_MINOR_TRIGGER_CRON_DEFAULT = null; // disabled
 
   public static final String SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO =
       "self-optimizing.major.trigger.duplicate-ratio";
   public static final double SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO_DEFAULT = 0.1;
 
-  public static final String SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL =
-      "self-optimizing.major.trigger.interval";
-  public static final int SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL_DEFAULT = -1; // not trigger
+  public static final String SELF_OPTIMIZING_MAJOR_TRIGGER_CRON =
+      "self-optimizing.major.trigger.cron";
+  public static final String SELF_OPTIMIZING_MAJOR_TRIGGER_CRON_DEFAULT = null; // disabled
 
-  public static final String SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL =
-      "self-optimizing.full.trigger.interval";
-  public static final int SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL_DEFAULT = -1; // not trigger
+  public static final String SELF_OPTIMIZING_FULL_TRIGGER_CRON =
+      "self-optimizing.full.trigger.cron";
+  public static final String SELF_OPTIMIZING_FULL_TRIGGER_CRON_DEFAULT = null; // disabled
 
   public static final String SELF_OPTIMIZING_FULL_REWRITE_ALL_FILES =
       "self-optimizing.full.rewrite-all-files";

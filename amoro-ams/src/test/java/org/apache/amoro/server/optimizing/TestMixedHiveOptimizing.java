@@ -95,7 +95,7 @@ public class TestMixedHiveOptimizing extends AbstractOptimizingTest {
     KeyedTable table = mixedTable.asKeyedTable();
     // Step1: write 1 data file into base node(0,0)
     updateProperties(table, TableProperties.BASE_FILE_INDEX_HASH_BUCKET, 1 + "");
-    updateProperties(table, TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL, 1000 + "");
+    updateProperties(table, TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON, "* * * * *");
     updateProperties(table, TableProperties.SELF_OPTIMIZING_FULL_REWRITE_ALL_FILES, false + "");
     writeBase(table, rangeFromTo(1, 100, "aaa", quickDateWithZone(3)));
     // wait Full Optimize result

@@ -24,10 +24,10 @@ import org.apache.amoro.ServerTableIdentifier;
 import org.apache.amoro.config.OptimizingConfig;
 import org.apache.amoro.optimizing.HealthScoreInfo;
 import org.apache.amoro.optimizing.OptimizingType;
-import org.apache.amoro.optimizing.evaluation.MetadataBasedEvaluationEvent;
 import org.apache.amoro.shade.guava32.com.google.common.base.MoreObjects;
 import org.apache.amoro.shade.guava32.com.google.common.base.Preconditions;
 import org.apache.amoro.shade.guava32.com.google.common.collect.Sets;
+import org.apache.amoro.utils.CronUtils;
 import org.apache.amoro.utils.TableFileUtil;
 import org.apache.iceberg.ContentFile;
 import org.apache.iceberg.DataFile;
@@ -55,8 +55,8 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   protected final long minTargetSize;
   protected final long planTime;
 
-  private final boolean reachFullInterval;
-  private final boolean reachMajorInterval;
+  private final boolean reachFullCron;
+  private final boolean reachMajorCron;
 
   // fragment files
   protected int fragmentFileCount = 0;
@@ -85,9 +85,6 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   protected long posDeleteFileSize = 0L;
   protected long posDeleteFileRecords = 0L;
 
-  // mse stat
-  protected long fileSizeSquaredErrorSum = 0L;
-
   private long cost = -1;
   private Boolean necessary = null;
   private OptimizingType optimizingType = null;
@@ -115,12 +112,10 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     this.lastMinorOptimizingTime = lastMinorOptimizingTime;
     this.lastMajorOptimizingTime = lastMajorOptimizingTime;
     this.lastFullOptimizingTime = lastFullOptimizingTime;
-    this.reachMajorInterval =
-        config.getMajorTriggerInterval() >= 0
-            && planTime - lastMajorOptimizingTime > config.getMajorTriggerInterval();
-    this.reachFullInterval =
-        config.getFullTriggerInterval() >= 0
-            && planTime - lastFullOptimizingTime > config.getFullTriggerInterval();
+    this.reachMajorCron =
+        CronUtils.hasFired(config.getMajorTriggerCron(), lastMajorOptimizingTime, planTime);
+    this.reachFullCron =
+        CronUtils.hasFired(config.getFullTriggerCron(), lastFullOptimizingTime, planTime);
   }
 
   @Override
@@ -141,11 +136,6 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     if (!config.isEnabled()) {
       return false;
     }
-    if (config.isMetadataBasedTriggerEnabled() && config.getEvaluationMseTolerance() > 0) {
-      // Update the file size squared error sum
-      updateFileSizeSquaredErrorSum(dataFile);
-    }
-
     if (isFragmentFile(dataFile)) {
       return addFragmentFile(dataFile, deletes);
     } else if (isUndersizedSegmentFile(dataFile)) {
@@ -226,31 +216,6 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     return false;
   }
 
-  private void updateFileSizeSquaredErrorSum(DataFile dataFile) {
-    // Only accumulate squared error for files smaller than `minTargetSize`
-    // For files larger than or equal to minTargetSize, diffSize will be 0, contributing nothing to
-    // the error sum
-    long diffSize = minTargetSize - Math.min(dataFile.fileSizeInBytes(), minTargetSize);
-    if (diffSize <= 0) {
-      return;
-    }
-
-    // Prevent overflow for diffSize * diffSize by saturating to Long.MAX_VALUE
-    final long prod;
-    if (diffSize > Long.MAX_VALUE / diffSize) {
-      prod = Long.MAX_VALUE;
-    } else {
-      prod = diffSize * diffSize;
-    }
-
-    // Prevent overflow when adding to fileSizeSquaredErrorSum (saturate to Long.MAX_VALUE)
-    if (fileSizeSquaredErrorSum > Long.MAX_VALUE - prod) {
-      fileSizeSquaredErrorSum = Long.MAX_VALUE;
-    } else {
-      fileSizeSquaredErrorSum += prod;
-    }
-  }
-
   protected boolean fileShouldFullOptimizing(DataFile dataFile, List<ContentFile<?>> deleteFiles) {
     if (config.isFullRewriteAllFiles()) {
       return true;
@@ -303,7 +268,7 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   }
 
   protected boolean isFullOptimizing() {
-    return reachFullInterval();
+    return reachFullCron();
   }
 
   private long getPosDeletesRecordCount(List<ContentFile<?>> files) {
@@ -331,25 +296,40 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   @Override
   public boolean isNecessary() {
     if (necessary == null) {
-      long lastPlanTime =
-          Math.max(
-              Math.max(lastMinorOptimizingTime, lastMajorOptimizingTime), lastFullOptimizingTime);
-      if (config.isMetadataBasedTriggerEnabled()
-          && !MetadataBasedEvaluationEvent.isReachFallbackInterval(config, lastPlanTime)) {
-        long fileCount = fragmentFileCount + undersizedSegmentFileCount;
-        if (!MetadataBasedEvaluationEvent.isPartitionPendingNecessary(
-            config, fileSizeSquaredErrorSum, fileCount)) {
-          LOG.debug("{} not necessary due to metadata-based evaluation, {}", name(), this);
-          necessary = false;
-          return false;
+      boolean fullFired = reachFullCron;
+      boolean majorFired = reachMajorCron;
+      boolean minorFired = reachMinorCron();
+
+      if (fullFired) {
+        if (majorFired && minorFired) {
+          LOG.info("{} FULL+MAJOR+MINOR crons fired — scheduling FULL (suppressing MAJOR, MINOR)", name());
+        } else if (majorFired) {
+          LOG.info("{} FULL+MAJOR crons fired — scheduling FULL (suppressing MAJOR)", name());
+        } else if (minorFired) {
+          LOG.info("{} FULL+MINOR crons fired — scheduling FULL (suppressing MINOR)", name());
+        } else {
+          LOG.info("{} FULL cron fired — scheduling FULL compaction", name());
         }
-      }
-      if (isFullOptimizing()) {
-        necessary = isFullNecessary();
+        necessary = true;
+      } else if (majorFired) {
+        if (minorFired) {
+          LOG.info("{} MAJOR+MINOR crons fired — scheduling MAJOR (suppressing MINOR)", name());
+        } else {
+          LOG.info("{} MAJOR cron fired — scheduling MAJOR compaction", name());
+        }
+        necessary = true;
+      } else if (minorFired) {
+        LOG.info("{} MINOR cron fired — scheduling MINOR compaction", name());
+        necessary = true;
       } else {
-        necessary = isMajorNecessary() || isMinorNecessary();
+        LOG.info(
+            "{} cron arrived but no schedule matched this partition — skipping [full={}, major={}, minor={}]",
+            name(),
+            cronStatus(config.getFullTriggerCron()),
+            cronStatus(config.getMajorTriggerCron()),
+            cronStatus(config.getMinorTriggerCron()));
+        necessary = false;
       }
-      LOG.debug("{} necessary = {}, {}", name(), necessary, this);
     }
     return necessary;
   }
@@ -385,11 +365,14 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   @Override
   public OptimizingType getOptimizingType() {
     if (optimizingType == null) {
-      optimizingType =
-          isFullNecessary()
-              ? OptimizingType.FULL
-              : isMajorNecessary() ? OptimizingType.MAJOR : OptimizingType.MINOR;
-      LOG.debug("{} optimizingType = {} ", name(), optimizingType);
+      if (reachFullCron) {
+        optimizingType = OptimizingType.FULL;
+      } else if (reachMajorCron) {
+        optimizingType = OptimizingType.MAJOR;
+      } else {
+        optimizingType = OptimizingType.MINOR;
+      }
+      LOG.debug("{} optimizingType={}", name(), optimizingType);
     }
     return optimizingType;
   }
@@ -406,35 +389,12 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
         && min1SegmentFileSize + min2SegmentFileSize <= config.getTargetSize();
   }
 
-  public boolean isMajorNecessary() {
-    return isMajorIntervalNecessary();
+  protected boolean reachMinorCron() {
+    return CronUtils.hasFired(config.getMinorTriggerCron(), lastMinorOptimizingTime, planTime);
   }
 
-  public boolean isMinorNecessary() {
-    int smallFileCount = fragmentFileCount + equalityDeleteFileCount;
-    return smallFileCount >= config.getMinorLeastFileCount()
-        || (smallFileCount > 1 && reachMinorInterval())
-        || combinePosSegmentFileCount > 0;
-  }
-
-  protected boolean reachMinorInterval() {
-    return config.getMinorLeastInterval() >= 0
-        && planTime - lastMinorOptimizingTime > config.getMinorLeastInterval();
-  }
-
-  protected boolean reachFullInterval() {
-    return reachFullInterval;
-  }
-
-  public boolean isFullNecessary() {
-    if (!reachFullInterval()) {
-      return false;
-    }
-    return anyDeleteExist()
-        || fragmentFileCount >= 2
-        || undersizedSegmentFileCount >= 2
-        || rewriteSegmentFileCount > 0
-        || rewritePosSegmentFileCount > 0;
+  protected boolean reachFullCron() {
+    return reachFullCron;
   }
 
   protected String name() {
@@ -444,18 +404,12 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     return name;
   }
 
-  public boolean anyDeleteExist() {
-    return equalityDeleteFileCount > 0 || posDeleteFileCount > 0;
+  private static String cronStatus(String cron) {
+    return (cron == null || cron.isBlank()) ? "not-configured" : ("'" + cron + "'");
   }
 
-  private boolean isMajorIntervalNecessary() {
-    if (!reachMajorInterval) {
-      return false;
-    }
-
-    // Interval trigger should still require some pending input to avoid empty major process.
-    int dataFileCount = fragmentFileCount + getSegmentFileCount();
-    return dataFileCount > 1 || anyDeleteExist();
+  public boolean anyDeleteExist() {
+    return equalityDeleteFileCount > 0 || posDeleteFileCount > 0;
   }
 
   @Override
@@ -575,10 +529,6 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     return posDeleteFileRecords;
   }
 
-  public long getFileSizeSquaredErrorSum() {
-    return fileSizeSquaredErrorSum;
-  }
-
   public static class Weight implements PartitionEvaluator.Weight {
 
     private final long cost;
@@ -601,9 +551,9 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
         .add("fragmentSize", fragmentSize)
         .add("undersizedSegmentSize", minTargetSize)
         .add("planTime", planTime)
-        .add("lastMinorOptimizeTime", lastMinorOptimizingTime)
-        .add("lastMajorOptimizeTime", lastMajorOptimizingTime)
-        .add("lastFullOptimizeTime", lastFullOptimizingTime)
+        .add("lastMinorOptimizingTime", lastMinorOptimizingTime)
+        .add("lastMajorOptimizingTime", lastMajorOptimizingTime)
+        .add("lastFullOptimizingTime", lastFullOptimizingTime)
         .add("fragmentFileCount", fragmentFileCount)
         .add("fragmentFileSize", fragmentFileSize)
         .add("fragmentFileRecords", fragmentFileRecords)

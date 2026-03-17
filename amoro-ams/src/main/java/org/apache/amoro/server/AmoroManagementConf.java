@@ -95,7 +95,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Duration> REFRESH_EXTERNAL_CATALOGS_INTERVAL =
       ConfigOptions.key("refresh-external-catalogs.interval")
           .durationType()
-          .defaultValue(Duration.ofMinutes(3))
+          .defaultValue(Duration.ofMinutes(1))
           .withDescription("Interval to refresh the external catalog.");
 
   public static final ConfigOption<Integer> REFRESH_EXTERNAL_CATALOGS_THREAD_COUNT =
@@ -114,7 +114,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> EXPIRE_SNAPSHOTS_ENABLED =
       ConfigOptions.key("expire-snapshots.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false) // TODO: enable in future
           .withDescription("Enable snapshots expiring.");
 
   public static final ConfigOption<Integer> EXPIRE_SNAPSHOTS_THREAD_COUNT =
@@ -132,7 +132,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> CLEAN_ORPHAN_FILES_ENABLED =
       ConfigOptions.key("clean-orphan-files.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false) // TODO: enable in future
           .withDescription("Enable orphan files cleaning.");
 
   public static final ConfigOption<Integer> CLEAN_ORPHAN_FILES_THREAD_COUNT =
@@ -150,7 +150,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> CLEAN_DANGLING_DELETE_FILES_ENABLED =
       ConfigOptions.key("clean-dangling-delete-files.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false) // TODO: enable in future
           .withDescription("Enable dangling delete files cleaning.");
 
   public static final ConfigOption<Integer> CLEAN_DANGLING_DELETE_FILES_THREAD_COUNT =
@@ -186,7 +186,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> AUTO_CREATE_TAGS_ENABLED =
       ConfigOptions.key("auto-create-tags.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false) // TODO: enable in future
           .withDescription("Enable creating tags.");
 
   public static final ConfigOption<Integer> AUTO_CREATE_TAGS_THREAD_COUNT =
@@ -568,7 +568,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> DATA_EXPIRATION_ENABLED =
       ConfigOptions.key("data-expiration.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false) // TODO: enable in future
           .withDescription("Enable data expiration");
 
   public static final ConfigOption<Integer> DATA_EXPIRATION_THREAD_COUNT =

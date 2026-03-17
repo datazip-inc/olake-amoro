@@ -289,26 +289,26 @@ public class TableConfigurations {
                 properties,
                 TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_FILE_CNT,
                 TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_FILE_CNT_DEFAULT))
-        .setMinorLeastInterval(
-            CompatiblePropertyUtil.propertyAsInt(
+        .setMinorTriggerCron(
+            CompatiblePropertyUtil.propertyAsString(
                 properties,
-                TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL,
-                TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL_DEFAULT))
+                TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_CRON,
+                TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_CRON_DEFAULT))
         .setMajorDuplicateRatio(
             CompatiblePropertyUtil.propertyAsDouble(
                 properties,
                 TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO,
                 TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO_DEFAULT))
-        .setMajorTriggerInterval(
-            CompatiblePropertyUtil.propertyAsInt(
+        .setMajorTriggerCron(
+            CompatiblePropertyUtil.propertyAsString(
                 properties,
-                TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL,
-                TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_INTERVAL_DEFAULT))
-        .setFullTriggerInterval(
-            CompatiblePropertyUtil.propertyAsInt(
+                TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_CRON,
+                TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_CRON_DEFAULT))
+        .setFullTriggerCron(
+            CompatiblePropertyUtil.propertyAsString(
                 properties,
-                TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL,
-                TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL_DEFAULT))
+                TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON,
+                TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON_DEFAULT))
         .setFullRewriteAllFiles(
             CompatiblePropertyUtil.propertyAsBoolean(
                 properties,

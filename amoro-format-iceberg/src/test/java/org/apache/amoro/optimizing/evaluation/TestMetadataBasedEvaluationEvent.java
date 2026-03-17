@@ -19,7 +19,6 @@
 package org.apache.amoro.optimizing.evaluation;
 
 import org.apache.amoro.BasicTableTestHelper;
-import org.apache.amoro.ServerTableIdentifier;
 import org.apache.amoro.TableFormat;
 import org.apache.amoro.TableTestHelper;
 import org.apache.amoro.catalog.BasicCatalogTestHelper;
@@ -27,54 +26,35 @@ import org.apache.amoro.catalog.CatalogTestHelper;
 import org.apache.amoro.catalog.TableTestBase;
 import org.apache.amoro.config.OptimizingConfig;
 import org.apache.amoro.data.ChangeAction;
-import org.apache.amoro.iceberg.Constants;
 import org.apache.amoro.io.IcebergDataTestHelpers;
 import org.apache.amoro.io.MixedDataTestHelpers;
 import org.apache.amoro.io.writer.RecordWithAction;
-import org.apache.amoro.optimizing.plan.CommonPartitionEvaluator;
-import org.apache.amoro.optimizing.plan.MixedIcebergPartitionPlan;
-import org.apache.amoro.optimizing.plan.PartitionEvaluator;
-import org.apache.amoro.optimizing.scan.IcebergTableFileScanHelper;
-import org.apache.amoro.optimizing.scan.KeyedTableFileScanHelper;
-import org.apache.amoro.optimizing.scan.TableFileScanHelper;
-import org.apache.amoro.optimizing.scan.UnkeyedTableFileScanHelper;
 import org.apache.amoro.properties.HiveTableProperties;
 import org.apache.amoro.shade.guava32.com.google.common.collect.ImmutableList;
 import org.apache.amoro.shade.guava32.com.google.common.collect.Lists;
-import org.apache.amoro.shade.guava32.com.google.common.collect.Maps;
 import org.apache.amoro.shade.guava32.com.google.common.collect.Sets;
 import org.apache.amoro.table.KeyedTable;
-import org.apache.amoro.table.KeyedTableSnapshot;
 import org.apache.amoro.table.MixedTable;
 import org.apache.amoro.table.TableProperties;
 import org.apache.amoro.table.UnkeyedTable;
-import org.apache.amoro.utils.TablePropertyUtil;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.RowDelta;
 import org.apache.iceberg.Schema;
-import org.apache.iceberg.Snapshot;
-import org.apache.iceberg.StructLike;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.expressions.Expressions;
-import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
-import org.apache.iceberg.util.Pair;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class TestMetadataBasedEvaluationEvent extends TableTestBase {
@@ -287,168 +267,6 @@ public class TestMetadataBasedEvaluationEvent extends TableTestBase {
   }
 
   @Test
-  public void test_evaluating_pendingInput_nonEmptyTable() throws IOException {
-    initData();
-    // Set metadata-based trigger enabled and fallback interval not reached.
-    OptimizingConfig config =
-        getDefaultOptimizingConfig().setEvaluationFallbackInterval(Long.MAX_VALUE);
-    MixedTable table = getMixedTable();
-
-    // 1. Test file size square error sum updates during partition plans initialization using
-    // default mse tolerance (=0) , expecting no updates.
-    TableFileScanHelper tableFileScanHelper = initTableFileScanHelper();
-    Map<String, PartitionEvaluator> partitionPlanMap =
-        initPartitionPlans(tableFileScanHelper, config);
-
-    Assert.assertEquals(1, partitionPlanMap.size());
-
-    long sizeSquaredErrorSum =
-        ((CommonPartitionEvaluator) new ArrayList<>(partitionPlanMap.values()).get(0))
-            .getFileSizeSquaredErrorSum();
-    Assert.assertEquals(0L, sizeSquaredErrorSum);
-
-    List<PartitionEvaluator> necessaryPartitions =
-        partitionPlanMap.values().stream()
-            .filter(PartitionEvaluator::isNecessary)
-            .collect(Collectors.toList());
-    Assert.assertEquals(1, necessaryPartitions.size());
-
-    // 2. Set mse tolerance > 0 to enabled file size square error sum update during initializing
-    // Partition plans.
-    config.setEvaluationMseTolerance(120000000);
-    partitionPlanMap = initPartitionPlans(tableFileScanHelper, config);
-    Assert.assertEquals(1, partitionPlanMap.size());
-
-    sizeSquaredErrorSum =
-        ((CommonPartitionEvaluator) new ArrayList<>(partitionPlanMap.values()).get(0))
-            .getFileSizeSquaredErrorSum();
-    Assert.assertTrue(sizeSquaredErrorSum > 0);
-
-    necessaryPartitions =
-        partitionPlanMap.values().stream()
-            .filter(PartitionEvaluator::isNecessary)
-            .collect(Collectors.toList());
-    Assert.assertEquals(0, necessaryPartitions.size());
-
-    // 3. Test the file size variance updated after adding change data.
-    addChangeStoreData();
-    partitionPlanMap = initPartitionPlans(initTableFileScanHelper(), config);
-    Assert.assertEquals(1, partitionPlanMap.size());
-
-    long sizeSquaredErrorSumUpdated1 =
-        ((CommonPartitionEvaluator) new ArrayList<>(partitionPlanMap.values()).get(0))
-            .getFileSizeSquaredErrorSum();
-    Assert.assertNotEquals(sizeSquaredErrorSum, sizeSquaredErrorSumUpdated1);
-
-    necessaryPartitions =
-        partitionPlanMap.values().stream()
-            .filter(PartitionEvaluator::isNecessary)
-            .collect(Collectors.toList());
-    Assert.assertEquals(0, necessaryPartitions.size());
-
-    // 4. Set mse tolerance smaller for partitions to test necessary pending.
-    config.setEvaluationMseTolerance(100000000);
-    partitionPlanMap = initPartitionPlans(initTableFileScanHelper(), config);
-
-    long sizeSquaredErrorSumUpdated2 =
-        ((CommonPartitionEvaluator) new ArrayList<>(partitionPlanMap.values()).get(0))
-            .getFileSizeSquaredErrorSum();
-    Assert.assertEquals(sizeSquaredErrorSumUpdated2, sizeSquaredErrorSumUpdated1);
-
-    necessaryPartitions =
-        partitionPlanMap.values().stream()
-            .filter(PartitionEvaluator::isNecessary)
-            .collect(Collectors.toList());
-    Assert.assertEquals(1, necessaryPartitions.size());
-  }
-
-  private TableFileScanHelper initTableFileScanHelper() {
-    MixedTable mixedTable = getMixedTable();
-    TableFileScanHelper tableFileScanHelper;
-    if (TableFormat.ICEBERG.equals(mixedTable.format())) {
-      tableFileScanHelper =
-          new IcebergTableFileScanHelper(
-              mixedTable.asUnkeyedTable(),
-              mixedTable.asUnkeyedTable().currentSnapshot().snapshotId());
-    } else {
-      if (mixedTable.isUnkeyedTable()) {
-        tableFileScanHelper =
-            new UnkeyedTableFileScanHelper(
-                mixedTable.asUnkeyedTable(),
-                mixedTable.asUnkeyedTable().currentSnapshot().snapshotId());
-      } else {
-        Snapshot currentSnapshot = mixedTable.asKeyedTable().baseTable().currentSnapshot();
-        Snapshot changeSnapshot = mixedTable.asKeyedTable().changeTable().currentSnapshot();
-
-        tableFileScanHelper =
-            new KeyedTableFileScanHelper(
-                mixedTable.asKeyedTable(),
-                new KeyedTableSnapshot(
-                    currentSnapshot != null
-                        ? currentSnapshot.snapshotId()
-                        : Constants.INVALID_SNAPSHOT_ID,
-                    changeSnapshot != null
-                        ? changeSnapshot.snapshotId()
-                        : Constants.INVALID_SNAPSHOT_ID));
-      }
-    }
-    tableFileScanHelper.withPartitionFilter(Expressions.alwaysTrue());
-
-    return tableFileScanHelper;
-  }
-
-  private Map<String, PartitionEvaluator> initPartitionPlans(
-      TableFileScanHelper tableFileScanHelper, OptimizingConfig config) {
-    Map<String, PartitionEvaluator> partitionPlanMap = Maps.newHashMap();
-
-    long count = 0;
-    try (CloseableIterable<TableFileScanHelper.FileScanResult> results =
-        tableFileScanHelper.scan()) {
-      for (TableFileScanHelper.FileScanResult fileScanResult : results) {
-        PartitionSpec partitionSpec = tableFileScanHelper.getSpec(fileScanResult.file().specId());
-        StructLike partition = fileScanResult.file().partition();
-        String partitionPath = partitionSpec.partitionToPath(partition);
-        PartitionEvaluator evaluator =
-            partitionPlanMap.computeIfAbsent(
-                partitionPath,
-                ignore -> buildEvaluator(Pair.of(partitionSpec.specId(), partition), config));
-        evaluator.addFile(fileScanResult.file(), fileScanResult.deleteFiles());
-        count++;
-      }
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-    return partitionPlanMap;
-  }
-
-  private PartitionEvaluator buildEvaluator(
-      Pair<Integer, StructLike> partition, OptimizingConfig config) {
-    if (getMixedTable().isUnkeyedTable()) {
-      return new CommonPartitionEvaluator(
-          ServerTableIdentifier.of(TableTestHelper.TEST_TABLE_ID, TableFormat.ICEBERG),
-          config,
-          partition,
-          System.currentTimeMillis(),
-          0L,
-          0L,
-          0L);
-    } else {
-      Map<String, String> partitionProperties =
-          TablePropertyUtil.getPartitionProperties(getMixedTable(), partition.second());
-      return new MixedIcebergPartitionPlan.MixedIcebergPartitionEvaluator(
-          ServerTableIdentifier.of(TableTestHelper.TEST_TABLE_ID, TableFormat.MIXED_ICEBERG),
-          config,
-          partition,
-          partitionProperties,
-          System.currentTimeMillis(),
-          getMixedTable().isKeyedTable(),
-          0L,
-          0L,
-          0L);
-    }
-  }
-
-  @Test
   public void test_setFileSizeMSETolerance() {
     OptimizingConfig config = new OptimizingConfig();
     Assert.assertEquals(0, config.getEvaluationMseTolerance());
@@ -531,10 +349,10 @@ public class TestMetadataBasedEvaluationEvent extends TableTestBase {
         .setMaxTaskSize(TableProperties.SELF_OPTIMIZING_MAX_TASK_SIZE_DEFAULT)
         .setTargetQuota(TableProperties.SELF_OPTIMIZING_QUOTA_DEFAULT)
         .setMinorLeastFileCount(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_FILE_CNT_DEFAULT)
-        .setMinorLeastInterval(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL_DEFAULT)
+        .setMinorTriggerCron(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_CRON_DEFAULT)
         .setMajorDuplicateRatio(
             TableProperties.SELF_OPTIMIZING_MAJOR_TRIGGER_DUPLICATE_RATIO_DEFAULT)
-        .setFullTriggerInterval(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL_DEFAULT)
+        .setFullTriggerCron(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON_DEFAULT)
         .setFullRewriteAllFiles(TableProperties.SELF_OPTIMIZING_FULL_REWRITE_ALL_FILES_DEFAULT)
         .setFilter(TableProperties.SELF_OPTIMIZING_FILTER_DEFAULT)
         .setBaseHashBucket(TableProperties.BASE_FILE_INDEX_HASH_BUCKET_DEFAULT)

@@ -93,7 +93,7 @@ public class MixedHivePartitionPlan extends MixedIcebergPartitionPlan {
   }
 
   private boolean moveFiles2CurrentHiveLocation() {
-    return evaluator().isFullNecessary()
+    return evaluator().isFullOptimizing()
         && !config.isFullRewriteAllFiles()
         && !evaluator().anyDeleteExist();
   }
@@ -125,7 +125,7 @@ public class MixedHivePartitionPlan extends MixedIcebergPartitionPlan {
         TaskProperties.TASK_EXECUTOR_FACTORY_IMPL, MixedHiveRewriteExecutorFactory.class.getName());
     if (moveFiles2CurrentHiveLocation()) {
       properties.put(TaskProperties.MOVE_FILE_TO_HIVE_LOCATION, "true");
-    } else if (evaluator().isFullNecessary()) {
+    } else if (evaluator().isFullOptimizing()) {
       properties.put(TaskProperties.OUTPUT_DIR, constructCustomHiveSubdirectory());
     }
     return properties;
@@ -211,16 +211,8 @@ public class MixedHivePartitionPlan extends MixedIcebergPartitionPlan {
     }
 
     @Override
-    public boolean isFullNecessary() {
-      if (!reachFullInterval() && !reachHiveRefreshInterval()) {
-        return false;
-      }
-      return fragmentFileCount > getBaseSplitCount() || hasNewHiveData();
-    }
-
-    @Override
     protected boolean isFullOptimizing() {
-      return reachFullInterval() || reachHiveRefreshInterval();
+      return reachFullCron() || reachHiveRefreshInterval();
     }
 
     protected boolean hasNewHiveData() {

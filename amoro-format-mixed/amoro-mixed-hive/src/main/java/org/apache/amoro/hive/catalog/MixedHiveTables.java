@@ -188,9 +188,9 @@ public class MixedHiveTables {
     fillTableProperties(tableMeta);
     String hiveLocation =
         tableMeta.getProperties().get(HiveTableProperties.BASE_HIVE_LOCATION_ROOT);
-    // Default 1 day
-    if (!tableMeta.properties.containsKey(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL)) {
-      tableMeta.putToProperties(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL, "86400000");
+    // Default full compaction once a day at midnight (equivalent to the former 86400000 ms interval).
+    if (!tableMeta.properties.containsKey(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON)) {
+      tableMeta.putToProperties(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON, "0 0 * * *");
     }
 
     AuthenticatedHadoopFileIO fileIO =

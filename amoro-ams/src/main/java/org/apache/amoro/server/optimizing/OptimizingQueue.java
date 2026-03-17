@@ -253,6 +253,24 @@ public class OptimizingQueue extends PersistentBase {
   private void scheduleTableIfNecessary(long startTime) {
     if (planningTables.size() < maxPlanningParallelism) {
       Set<ServerTableIdentifier> skipTables = new HashSet<>(planningTables);
+
+      // Explicit guard: never schedule a second compaction type for a table that already has a
+      // process waiting in the queue (e.g. a minor process sitting idle, not yet picked up by an
+      // optimizer). The status-machine provides implicit protection, but this makes the intent
+      // visible and prevents any edge-case race where status and queue are momentarily inconsistent.
+      tableQueue.forEach(
+          process -> {
+            ServerTableIdentifier id = process.getTableIdentifier();
+            if (skipTables.add(id)) {
+              LOG.info(
+                  "Skipping scheduling for table {}: a {} compaction process (id={}) is already"
+                      + " present in the queue and has not been picked up yet.",
+                  id,
+                  process.getOptimizingType(),
+                  process.getProcessId());
+            }
+          });
+
       skipBlockedTables(skipTables);
       Optional.ofNullable(scheduler.scheduleTable(skipTables))
           .ifPresent(tableRuntime -> triggerAsyncPlanning(tableRuntime, skipTables, startTime));
@@ -329,6 +347,22 @@ public class OptimizingQueue extends PersistentBase {
     tableRuntime.beginPlanning();
     try {
       ServerTableIdentifier identifier = tableRuntime.getTableIdentifier();
+
+      // Safety-net: if a process for this table somehow slipped through the skip-set check in
+      // scheduleTableIfNecessary (e.g. due to an unlikely race), abort planning rather than push
+      // a second compaction type into the queue for the same table.
+      boolean alreadyQueued =
+          tableQueue.stream().anyMatch(p -> p.getTableIdentifier().equals(identifier));
+      if (alreadyQueued) {
+        LOG.warn(
+            "Aborting planning for table {}: a compaction process is already present in the"
+                + " queue. This is unexpected — the scheduling guard should have prevented"
+                + " reaching this point.",
+            identifier);
+        tableRuntime.completeEmptyProcess();
+        return null;
+      }
+
       AmoroTable<?> table = catalogManager.loadTable(identifier.getIdentifier());
       AbstractOptimizingPlanner planner =
           IcebergTableUtil.createOptimizingPlanner(
@@ -517,6 +551,10 @@ public class OptimizingQueue extends PersistentBase {
     @Override
     public long getTableId() {
       return tableRuntime.getTableIdentifier().getId();
+    }
+
+    public ServerTableIdentifier getTableIdentifier() {
+      return tableRuntime.getTableIdentifier();
     }
 
     @Override
@@ -755,7 +793,9 @@ public class OptimizingQueue extends PersistentBase {
         }
         try {
           hasCommitted = true;
-          buildCommit().commit();
+          MixedTable committedTable = loadTableForCommit();
+          buildCommit(committedTable).commit();
+          long postCommitSnapshot = postCommitSnapshotId(committedTable);
           if (allTasksPrepared()) {
             status = ProcessStatus.SUCCESS;
           } else if (taskMap.values().stream()
@@ -765,7 +805,7 @@ public class OptimizingQueue extends PersistentBase {
             status = ProcessStatus.CLOSED;
           }
           endTime = System.currentTimeMillis();
-          persistAndSetCompleted(status == ProcessStatus.SUCCESS);
+          persistAndSetCompleted(status == ProcessStatus.SUCCESS, postCommitSnapshot);
         } catch (PersistenceException e) {
           LOG.warn(
               "{} failed to persist process completed, will retry next commit",
@@ -794,12 +834,14 @@ public class OptimizingQueue extends PersistentBase {
       return new MetricsSummary(taskSummaries);
     }
 
-    private UnKeyedTableCommit buildCommit() {
-      MixedTable table =
-          (MixedTable)
-              catalogManager
-                  .loadTable(tableRuntime.getTableIdentifier().getIdentifier())
-                  .originalTable();
+    private MixedTable loadTableForCommit() {
+      return (MixedTable)
+          catalogManager
+              .loadTable(tableRuntime.getTableIdentifier().getIdentifier())
+              .originalTable();
+    }
+
+    private UnKeyedTableCommit buildCommit(MixedTable table) {
       if (table.isUnkeyedTable()) {
         return new UnKeyedTableCommit(targetSnapshotId, table, taskMap.values());
       } else {
@@ -809,6 +851,22 @@ public class OptimizingQueue extends PersistentBase {
             targetSnapshotId,
             convertPartitionSequence(table, fromSequence),
             convertPartitionSequence(table, toSequence));
+      }
+    }
+
+    private long postCommitSnapshotId(MixedTable table) {
+      try {
+        org.apache.iceberg.Snapshot s =
+            table.isUnkeyedTable()
+                ? table.asUnkeyedTable().currentSnapshot()
+                : table.asKeyedTable().baseTable().currentSnapshot();
+        return s != null ? s.snapshotId() : targetSnapshotId;
+      } catch (Exception e) {
+        LOG.warn(
+            "Could not read post-commit snapshot for {}, falling back to targetSnapshotId",
+            tableRuntime.getTableIdentifier(),
+            e);
+        return targetSnapshotId;
       }
     }
 
@@ -866,6 +924,10 @@ public class OptimizingQueue extends PersistentBase {
     }
 
     private void persistAndSetCompleted(boolean success) {
+      persistAndSetCompleted(success, targetSnapshotId);
+    }
+
+    private void persistAndSetCompleted(boolean success, long lastOptimizedSnapshotId) {
       doAsTransaction(
           () -> {
             if (!success) {
@@ -887,7 +949,7 @@ public class OptimizingQueue extends PersistentBase {
                           getFailedReason(),
                           new HashMap<>(),
                           getSummary().summaryAsMap(false))),
-          () -> tableRuntime.completeProcess(success),
+          () -> tableRuntime.completeProcess(success, lastOptimizedSnapshotId),
           () -> clearProcess(this));
     }
 

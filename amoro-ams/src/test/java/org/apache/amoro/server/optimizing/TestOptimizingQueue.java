@@ -532,7 +532,7 @@ public class TestOptimizingQueue extends AMSTableTestBase {
     mixedTable
         .updateProperties()
         .set(TableProperties.SELF_OPTIMIZING_MIN_PLAN_INTERVAL, "10")
-        .set(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL, "10")
+        .set(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_CRON, "* * * * *")
         .commit();
     appendData(mixedTable.asUnkeyedTable(), 1);
     appendData(mixedTable.asUnkeyedTable(), 2);

@@ -177,7 +177,7 @@ public class TestOptimizingIntegration {
             .newTableBuilder(tableIdentifier, SCHEMA)
             .withPrimaryKeySpec(primaryKeySpec)
             .withPartitionSpec(partitionSpec)
-            .withProperty(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL, "1000");
+            .withProperty(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_CRON, "* * * * *");
 
     return tableBuilder.create();
   }
@@ -190,7 +190,7 @@ public class TestOptimizingIntegration {
             .newTableBuilder(tableIdentifier, SCHEMA)
             .withPrimaryKeySpec(primaryKeySpec)
             .withPartitionSpec(partitionSpec)
-            .withProperty(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL, "1000");
+            .withProperty(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_CRON, "* * * * *");
 
     tableBuilder.create();
   }
