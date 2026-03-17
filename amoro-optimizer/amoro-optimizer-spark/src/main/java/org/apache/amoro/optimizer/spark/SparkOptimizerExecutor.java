@@ -62,28 +62,21 @@ public class SparkOptimizerExecutor extends OptimizerExecutor {
 
     // Set MDC context for Log4j2 routing
     // Driver logs go to: <LOG_DIR>/<processId>/driver.log
-    // Only set processId (not taskId) — driver handles multiple tasks per process.
     MDC.put("processId", String.valueOf(processId));
     MDC.put("logFilePath", processId + "/driver");
 
     try {
-      // LOG.info("Starting task execution");
-      // LOG.info("Task ID: {}, Thread: {}", task.getTaskId(), threadName);
-
       ImmutableList<OptimizingTask> of = ImmutableList.of(task);
       jsc.setJobDescription(jobDescription(task));
       SparkOptimizingTaskFunction taskFunction =
           new SparkOptimizingTaskFunction(getConfig(), threadId);
       List<OptimizingTaskResult> results = jsc.parallelize(of, 1).map(taskFunction).collect();
       result = results.get(0);
-
-      long duration = System.currentTimeMillis() - startTime;
-      // LOG.info("Task completed successfully in {} ms", duration);
       LOG.info(
           "Optimizer executor[{}] executed task[{}] and cost {} ms",
           threadName,
           task.getTaskId(),
-          duration);
+          System.currentTimeMillis() - startTime);
       return result;
     } catch (Throwable r) {
       long duration = System.currentTimeMillis() - startTime;
@@ -98,10 +91,8 @@ public class SparkOptimizerExecutor extends OptimizerExecutor {
       result.setErrorMessage(ExceptionUtil.getErrorMessage(r, ERROR_MESSAGE_MAX_LENGTH));
       return result;
     } finally {
-      // Do NOT clear MDC here. Keep it set so that the parent class's
-      // completeTask() and next pollTask()/ackTask() logs also route
-      // to driver.log instead of the junk ${ctx:logFilePath}.log file.
-      // MDC will be overwritten at the start of the next executeTask() call.
+      MDC.remove("processId");
+      MDC.remove("logFilePath");
     }
   }
 

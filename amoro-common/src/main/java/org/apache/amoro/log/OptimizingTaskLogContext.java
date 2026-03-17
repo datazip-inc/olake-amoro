@@ -22,12 +22,15 @@ package org.apache.amoro.log;
 
 import org.apache.logging.log4j.ThreadContext;
 
+// manages per-thread logging context using Log4j2 thread context: setting "processId" and "taskId"
+// isContextSet: prevent overwriting an already-initialized MDC context
 public class OptimizingTaskLogContext {
 
   public static final String PROCESS_ID_KEY = "processId";
   public static final String TASK_ID_KEY = "taskId";
   public static final String LOG_FILE_PATH_KEY = "logFilePath";
 
+  // per-thread flag indicating whether a caller has already set up logging context.
   private static final ThreadLocal<Boolean> CONTEXT_SET = ThreadLocal.withInitial(() -> false);
 
   public static void setContext(long processId, int taskId) {

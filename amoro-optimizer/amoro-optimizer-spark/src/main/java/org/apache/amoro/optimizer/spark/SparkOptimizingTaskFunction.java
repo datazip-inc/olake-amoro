@@ -62,9 +62,7 @@ public class SparkOptimizingTaskFunction implements Function<OptimizingTask, Opt
     MDC.put("logFilePath", logFilePath);
 
     try {
-      // LOG.info("Executing task on Spark executor");
       OptimizingTaskResult result = OptimizerExecutor.executeTask(config, threadId, task, LOG);
-      // LOG.info("Task execution completed on executor");
       return result;
     } catch (Exception e) {
       LOG.error("Task execution failed on executor", e);

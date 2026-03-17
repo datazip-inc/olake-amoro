@@ -409,6 +409,8 @@ public class DashboardServer {
           "/logs",
           () -> {
             get("/process/{processId}", logController::getProcessLogs);
+            get("/process/{processId}/download", logController::downloadProcessLogs);
+            get("/process/{processId}/file/{fileId}", logController::downloadLogFile);
           });
     };
   }
@@ -485,7 +487,6 @@ public class DashboardServer {
     "/swagger-docs",
     "/api/ams/v1/api/token/calculate/signature",
     "/api/ams/v1/api/token/calculate/encryptString",
-    "/api/ams/v1/logs/*",
     RestCatalogService.ICEBERG_REST_API_PREFIX + "/*"
   };
 

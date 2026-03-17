@@ -27,7 +27,6 @@ import static org.apache.iceberg.TableProperties.DELETE_DEFAULT_FILE_FORMAT;
 import org.apache.amoro.data.DataTreeNode;
 import org.apache.amoro.io.AuthenticatedFileIO;
 import org.apache.amoro.io.writer.SetTreeNode;
-import org.apache.amoro.log.OptimizingTaskLogContext;
 import org.apache.amoro.shade.guava32.com.google.common.collect.Lists;
 import org.apache.amoro.table.MixedTable;
 import org.apache.amoro.table.TableProperties;
@@ -99,48 +98,28 @@ public abstract class AbstractRewriteFilesExecutor
 
   @Override
   public RewriteFilesOutput execute() {
-    boolean shouldClearContext = false;
-    if (!OptimizingTaskLogContext.isContextSet()
-        && properties.containsKey(TaskProperties.PROCESS_ID)) {
-      try {
-        long processId = Long.parseLong(properties.get(TaskProperties.PROCESS_ID));
-        int taskId =
-            properties.containsKey("taskId") ? Integer.parseInt(properties.get("taskId")) : -1;
-        OptimizingTaskLogContext.setContext(processId, taskId);
-        shouldClearContext = true;
-      } catch (Exception e) {
-        LOG.warn("Failed to set logging context in AbstractRewriteFilesExecutor", e);
-      }
-    }
+    LOG.info("Start processing table optimize task: {}", input);
 
+    List<DataFile> dataFiles = new ArrayList<>();
+    List<DeleteFile> deleteFiles = new ArrayList<>();
+
+    long startTime = System.currentTimeMillis();
     try {
-      LOG.info("Start processing table optimize task: {}", input);
-
-      List<DataFile> dataFiles = new ArrayList<>();
-      List<DeleteFile> deleteFiles = new ArrayList<>();
-
-      long startTime = System.currentTimeMillis();
-      try {
-        if (!ArrayUtils.isEmpty(input.rePosDeletedDataFiles())) {
-          deleteFiles = io.doAs(this::equalityToPosition);
-        }
-
-        if (!ArrayUtils.isEmpty(input.rewrittenDataFiles())) {
-          dataFiles = io.doAs(this::rewriterDataFiles);
-        }
-      } finally {
-        dataReader.close();
+      if (!ArrayUtils.isEmpty(input.rePosDeletedDataFiles())) {
+        deleteFiles = io.doAs(this::equalityToPosition);
       }
-      long duration = System.currentTimeMillis() - startTime;
 
-      Map<String, String> summary = resolverSummary(dataFiles, deleteFiles, duration);
-      return new RewriteFilesOutput(
-          dataFiles.toArray(new DataFile[0]), deleteFiles.toArray(new DeleteFile[0]), summary);
+      if (!ArrayUtils.isEmpty(input.rewrittenDataFiles())) {
+        dataFiles = io.doAs(this::rewriterDataFiles);
+      }
     } finally {
-      if (shouldClearContext) {
-        OptimizingTaskLogContext.clearContext();
-      }
+      dataReader.close();
     }
+    long duration = System.currentTimeMillis() - startTime;
+
+    Map<String, String> summary = resolverSummary(dataFiles, deleteFiles, duration);
+    return new RewriteFilesOutput(
+        dataFiles.toArray(new DataFile[0]), deleteFiles.toArray(new DeleteFile[0]), summary);
   }
 
   private List<DeleteFile> equalityToPosition() throws Exception {
