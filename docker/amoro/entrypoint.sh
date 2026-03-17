@@ -44,9 +44,9 @@ configure_jvm_options() {
 
 configure_jvm_options
 
-# creating logs directory with write permissions
-mkdir -p /usr/local/amoro/logs/compaction
-chmod 777 /usr/local/amoro/logs/compaction
+# Create compaction log directory for Log4j2 routing (mounted as shared volume)
+mkdir -p /mnt/amoro-logs/compaction
+chmod 777 /mnt/amoro-logs/compaction
 
 if [ $1 == "help" ]; then
   printf "Usage: $(basename $0) [ams|optimizer] [args]\n"

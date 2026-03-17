@@ -24,80 +24,85 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LogController {
   private static final Logger LOG = LoggerFactory.getLogger(LogController.class);
-  private static final String LOG_BASE_DIR = "/usr/local/amoro/logs/compaction";
+  private static final String LOG_BASE_DIR = "/mnt/amoro-logs/compaction";
 
-  public void getDriverLog(Context ctx) {
+  public void getProcessLogs(Context ctx) {
     String processId = ctx.pathParam("processId");
-
-    Path logFilePath = Paths.get(LOG_BASE_DIR, processId, "driver.log");
+    Path processDir = Paths.get(LOG_BASE_DIR, processId);
 
     Map<String, Object> response = new HashMap<>();
     response.put("processId", processId);
-    response.put("logType", "driver");
-    response.put("logFilePath", logFilePath.toString());
 
-    if (!Files.exists(logFilePath)) {
+    if (!Files.exists(processDir) || !Files.isDirectory(processDir)) {
       response.put("exists", false);
-      response.put("content", "");
-      response.put("message", "Driver log file not found");
+      response.put("message", "Process log directory not found");
+      response.put("driverLog", null);
+      response.put("taskLogs", new ArrayList<>());
       ctx.json(OkResponse.of(response));
       return;
     }
 
-    try {
-      String content = Files.readString(logFilePath);
-      response.put("exists", true);
-      response.put("content", content);
-      response.put("size", Files.size(logFilePath));
-      ctx.json(OkResponse.of(response));
+    response.put("exists", true);
+
+    // Read driver log
+    Path driverLogPath = processDir.resolve("driver.log");
+    Map<String, Object> driverLog = new HashMap<>();
+    if (Files.exists(driverLogPath)) {
+      try {
+        driverLog.put("exists", true);
+        driverLog.put("content", Files.readString(driverLogPath));
+        driverLog.put("size", Files.size(driverLogPath));
+      } catch (IOException e) {
+        LOG.error("Failed to read driver log: {}", driverLogPath, e);
+        driverLog.put("exists", true);
+        driverLog.put("error", "Failed to read: " + e.getMessage());
+      }
+    } else {
+      driverLog.put("exists", false);
+    }
+    response.put("driverLog", driverLog);
+
+    // Read all task logs
+    List<Map<String, Object>> taskLogs = new ArrayList<>();
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(processDir, "*.log")) {
+      for (Path taskLogPath : stream) {
+        String fileName = taskLogPath.getFileName().toString();
+        if (fileName.equals("driver.log")) {
+          continue; // Skip driver log
+        }
+
+        String taskId = fileName.replace(".log", "");
+        Map<String, Object> taskLog = new HashMap<>();
+        taskLog.put("taskId", taskId);
+
+        try {
+          taskLog.put("exists", true);
+          taskLog.put("content", Files.readString(taskLogPath));
+          taskLog.put("size", Files.size(taskLogPath));
+          taskLogs.add(taskLog);
+        } catch (IOException e) {
+          LOG.error("Failed to read task log: {}", taskLogPath, e);
+          taskLog.put("exists", true);
+          taskLog.put("error", "Failed to read: " + e.getMessage());
+          taskLogs.add(taskLog);
+        }
+      }
     } catch (IOException e) {
-      LOG.error("Failed to read driver log file: {}", logFilePath, e);
-      response.put("exists", true);
-      response.put("content", "");
-      response.put("error", "Failed to read driver log file: " + e.getMessage());
-      ctx.json(OkResponse.of(response));
-    }
-  }
-
-  public void getTaskLog(Context ctx) {
-    String processId = ctx.pathParam("processId");
-    String taskId = ctx.pathParam("taskId");
-
-    Path logFilePath = Paths.get(LOG_BASE_DIR, processId, taskId + ".log");
-
-    Map<String, Object> response = new HashMap<>();
-    response.put("processId", processId);
-    response.put("taskId", taskId);
-    response.put("logFilePath", logFilePath.toString());
-
-    if (!Files.exists(logFilePath)) {
-      response.put("exists", false);
-      response.put("content", "");
-      response.put("message", "Log file not found");
-      ctx.json(OkResponse.of(response));
-      return;
+      LOG.error("Failed to list task logs in directory: {}", processDir, e);
     }
 
-    try {
-      String content = Files.readString(logFilePath);
-      response.put("exists", true);
-      response.put("content", content);
-      response.put("size", Files.size(logFilePath));
-      ctx.json(OkResponse.of(response));
-    } catch (IOException e) {
-      LOG.error("Failed to read log file: {}", logFilePath, e);
-      response.put("exists", true);
-      response.put("content", "");
-      response.put("error", "Failed to read log file: " + e.getMessage());
-      ctx.json(OkResponse.of(response));
-    }
+    response.put("taskLogs", taskLogs);
+    ctx.json(OkResponse.of(response));
   }
 }

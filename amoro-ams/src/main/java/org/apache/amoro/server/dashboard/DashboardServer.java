@@ -141,6 +141,7 @@ public class DashboardServer {
   }
 
   private volatile String indexHtml = null;
+
   // read index.html content
   public String getIndexFileContent() {
     if (indexHtml == null) {
@@ -183,13 +184,14 @@ public class DashboardServer {
       // staticFiles.headers = Map.of(...);
       // headers that will be set for the files
       staticFiles.skipFileFunction = req -> false;
-      // you can use this to skip certain files in the dir, based on the HttpServletRequest
+      // you can use this to skip certain files in the dir, based on the
+      // HttpServletRequest
     };
   }
 
   public EndpointGroup endpoints() {
     return () -> {
-      /*backend routers*/
+      /* backend routers */
       path(
           "",
           () -> {
@@ -400,12 +402,11 @@ public class DashboardServer {
             post("/calculate/encryptString", apiTokenController::getEncryptStringFromQueryParam);
           });
 
-      // log apis
+      // logs api
       path(
           "/logs",
           () -> {
-            get("/driver/{processId}", logController::getDriverLog);
-            get("/tasks/{processId}/{taskId}", logController::getTaskLog);
+            get("/process/{processId}", logController::getProcessLogs);
           });
     };
   }
@@ -446,7 +447,7 @@ public class DashboardServer {
 
   public void handleException(Exception e, Context ctx) {
     if (e instanceof ForbiddenException) {
-      // request doesn't start with /ams is  page request. we return index.html
+      // request doesn't start with /ams is page request. we return index.html
       if (!ctx.req.getRequestURI().startsWith("/api/ams")) {
         ctx.html(getIndexFileContent());
       } else {
@@ -482,6 +483,7 @@ public class DashboardServer {
     "/swagger-docs",
     "/api/ams/v1/api/token/calculate/signature",
     "/api/ams/v1/api/token/calculate/encryptString",
+    "/api/ams/v1/logs/*",
     RestCatalogService.ICEBERG_REST_API_PREFIX + "/*"
   };
 
