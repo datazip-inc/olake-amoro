@@ -22,7 +22,7 @@ AMORO_DIST_TAR := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
 AMORO_RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT
 AMORO_BIN_HOME := $(CURDIR)/dist/src/main/amoro-bin
 
-.PHONY: start-fusion-docker clean-fusion-docker start-deps stop-deps prepare-optimizer-lib prepare-debug-runtime setup-debug-mode clean-debug-mode sync-frontend help
+.PHONY: start-fusion-docker clean-fusion-docker start-deps stop-deps prepare-optimizer-lib prepare-debug-runtime setup-debug-mode clean-debug-mode sync-frontend spotless-fix help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -38,6 +38,7 @@ help:
 	@echo "  make setup-debug-mode      deps + build + install to ~/.m2 + lib sync"
 	@echo "  make clean-debug-mode      Stop deps + cleanup extracted runtime"
 	@echo "  make sync-frontend         Sync built frontend assets to target/ (fixes blank UI without rebuild)"
+	@echo "  make spotless-fix          Auto-fix all Spotless (Google Java Format) violations"
 	@echo ""
 	@echo "Access:"
 	@echo "  Fusion Web UI : http://localhost:1630  (admin / password)"
@@ -70,6 +71,8 @@ stop-deps:
 prepare-debug-runtime:
 	@echo "Cleaning up stale optimizer logs (prevents RAT license check failure)..."
 	@rm -rf "$(AMORO_BIN_HOME)/logs/optimizer-local-test-"*
+	@echo "Removing all target directories to prevent stale/corrupt class files..."
+	@find "$(CURDIR)" -maxdepth 3 -name target -type d -exec rm -rf {} + 2>/dev/null; true
 	@echo "Building and installing all modules to local Maven repo (~/.m2)..."
 	@./mvnw clean install -DskipTests -Drat.skip=true -Dspotless.skip=true -Dcheckstyle.skip=true -B -ntp
 	@$(MAKE) prepare-optimizer-lib
@@ -100,6 +103,11 @@ clean-debug-mode:
 	@$(MAKE) stop-deps
 	@rm -rf "$(AMORO_RUNTIME_HOME)"
 	@echo "Teardown complete."
+
+spotless-fix:
+	@echo "Running Spotless auto-fix (Google Java Format + import ordering)..."
+	@./mvnw spotless:apply -B -ntp
+	@echo "Spotless fix complete."
 
 sync-frontend:
 	@echo "Syncing frontend assets from src/main/resources/static → target/classes/static ..."
