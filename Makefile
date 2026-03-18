@@ -22,6 +22,21 @@ AMORO_DIST_TAR := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
 AMORO_RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT
 AMORO_BIN_HOME := $(CURDIR)/dist/src/main/amoro-bin
 
+# Auto-detect JDK 17: use JAVA_HOME if it already points to JDK 17,
+# else try OS-specific discovery (macOS java_home utility, common Linux paths).
+JAVA_HOME_17 := $(shell \
+  _cur="$(JAVA_HOME)"; \
+  if [ -n "$$_cur" ] && "$$_cur/bin/java" -version 2>&1 | grep -q '"17\.'; then \
+    echo "$$_cur"; \
+  elif [ "$$(uname -s)" = "Darwin" ]; then \
+    /usr/libexec/java_home -v 17 2>/dev/null || true; \
+  else \
+    for d in /usr/lib/jvm/java-17-openjdk-amd64 /usr/lib/jvm/java-17-openjdk \
+              /usr/lib/jvm/temurin-17 /usr/lib/jvm/jdk-17; do \
+      [ -x "$$d/bin/java" ] && echo "$$d" && break; \
+    done; \
+  fi)
+
 .PHONY: start-fusion-docker clean-fusion-docker start-deps stop-deps prepare-optimizer-lib prepare-debug-runtime setup-debug-mode clean-debug-mode sync-frontend spotless-fix help
 
 # Default target
@@ -35,7 +50,7 @@ help:
 	@echo "  make clean-fusion-docker   Remove everything (Kind cluster + services + volumes)"
 	@echo "  make start-deps            Start Postgres and Minio for IDE debugging"
 	@echo "  make stop-deps             Stop Postgres and Minio"
-	@echo "  make setup-debug-mode      deps + build + install to ~/.m2 + lib sync"
+	@echo "  make setup-debug-mode      deps + build + install to ~/.m2 + lib sync  (requires JDK 17)"
 	@echo "  make clean-debug-mode      Stop deps + cleanup extracted runtime"
 	@echo "  make sync-frontend         Sync built frontend assets to target/ (fixes blank UI without rebuild)"
 	@echo "  make spotless-fix          Auto-fix all Spotless (Google Java Format) violations"
@@ -69,12 +84,16 @@ stop-deps:
 	@docker compose -f docker/kind/docker-compose.yml --profile dev down
 
 prepare-debug-runtime:
+	@if [ -z "$(JAVA_HOME_17)" ]; then \
+		echo "ERROR: JDK 17 not found. Install JDK 17 or point JAVA_HOME at a JDK 17 installation."; \
+		exit 1; \
+	fi
+	@echo "Using JDK 17: $(JAVA_HOME_17)"
 	@echo "Cleaning up stale optimizer logs (prevents RAT license check failure)..."
 	@rm -rf "$(AMORO_BIN_HOME)/logs/optimizer-local-test-"*
-	@echo "Removing all target directories to prevent stale/corrupt class files..."
-	@find "$(CURDIR)" -maxdepth 3 -name target -type d -exec rm -rf {} + 2>/dev/null; true
 	@echo "Building and installing all modules to local Maven repo (~/.m2)..."
-	@./mvnw clean install -DskipTests -Drat.skip=true -Dspotless.skip=true -Dcheckstyle.skip=true -B -ntp
+	@JAVA_HOME="$(JAVA_HOME_17)" PATH="$(JAVA_HOME_17)/bin:$(PATH)" \
+		./mvnw clean install -DskipTests -Drat.skip=true -Dmaven.clean.failOnError=false -B -ntp
 	@$(MAKE) prepare-optimizer-lib
 
 prepare-optimizer-lib:
