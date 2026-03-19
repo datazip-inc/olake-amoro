@@ -16,14 +16,14 @@
 #
 # Modified by Datazip Inc. in 2026
 
-COMPOSE_DIR := docker/kind
+COMPOSE_DIR  := docker/kind
 KIND_CLUSTER := fusion-cluster
-AMORO_DIST_TAR := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
-AMORO_RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT
-AMORO_BIN_HOME := $(CURDIR)/dist/src/main/amoro-bin
+DIST_TAR     := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
+RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT
+BIN_HOME     := $(CURDIR)/dist/src/main/amoro-bin
 
-# Auto-detect JDK 17: use JAVA_HOME if it already points to JDK 17,
-# else try OS-specific discovery (macOS java_home utility, common Linux paths).
+# Auto-detect JDK 17: prefer JAVA_HOME if already JDK 17,
+# then macOS java_home utility, then common Linux paths.
 JAVA_HOME_17 := $(shell \
   _cur="$(JAVA_HOME)"; \
   if [ -n "$$_cur" ] && "$$_cur/bin/java" -version 2>&1 | grep -q '"17\.'; then \
@@ -37,99 +37,104 @@ JAVA_HOME_17 := $(shell \
     done; \
   fi)
 
-.PHONY: start-fusion-docker clean-fusion-docker start-deps stop-deps prepare-optimizer-lib prepare-debug-runtime setup-debug-mode clean-debug-mode sync-frontend spotless-fix help
+MVN := JAVA_HOME="$(JAVA_HOME_17)" PATH="$(JAVA_HOME_17)/bin:$(PATH)" ./mvnw
 
-# Default target
 .DEFAULT_GOAL := help
 
+.PHONY: help build sync-libs setup-debug-mode clean-debug-mode \
+        start-deps stop-deps start-fusion-docker clean-fusion-docker \
+        sync-frontend spotless-fix
+
 help:
-	@echo "Fusion + Kind (Spark on Kubernetes)"
+	@echo "Fusion (Amoro) Development Makefile"
 	@echo ""
-	@echo "Usage:"
-	@echo "  make start-fusion-docker   Start everything (Kind cluster + all services + optimizer) *Before running make sure you have installed KIND*"
-	@echo "  make clean-fusion-docker   Remove everything (Kind cluster + services + volumes)"
+	@echo "Development:"
+	@echo "  make build                 Clean build + install to ~/.m2 + sync optimizer libs (requires JDK 17)"
+	@echo "  make sync-libs             Re-extract dist tar and sync optimizer libs (no rebuild)"
+	@echo "  make setup-debug-mode      Start deps + build (one-shot setup for IDE debugging)"
+	@echo "  make clean-debug-mode      Stop deps + cleanup extracted runtime"
+	@echo "  make sync-frontend         Sync built frontend assets to target/ (fixes blank UI)"
+	@echo "  make spotless-fix          Auto-fix Spotless (Google Java Format) violations"
+	@echo ""
+	@echo "Docker:"
 	@echo "  make start-deps            Start Postgres and Minio for IDE debugging"
 	@echo "  make stop-deps             Stop Postgres and Minio"
-	@echo "  make setup-debug-mode      deps + build + install to ~/.m2 + lib sync  (requires JDK 17)"
-	@echo "  make clean-debug-mode      Stop deps + cleanup extracted runtime"
-	@echo "  make sync-frontend         Sync built frontend assets to target/ (fixes blank UI without rebuild)"
-	@echo "  make spotless-fix          Auto-fix all Spotless (Google Java Format) violations"
+	@echo "  make start-fusion-docker   Start Kind cluster + all services + optimizer"
+	@echo "  make clean-fusion-docker   Remove Kind cluster + services + volumes"
 	@echo ""
 	@echo "Access:"
 	@echo "  Fusion Web UI : http://localhost:1630  (admin / password)"
 	@echo "  MinIO Console : http://localhost:9001  (admin / password)"
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
+build:
+	@if [ -z "$(JAVA_HOME_17)" ]; then \
+		echo "ERROR: JDK 17 not found. Install JDK 17 or set JAVA_HOME."; \
+		exit 1; \
+	fi
+	@echo "Using JDK 17: $(JAVA_HOME_17)"
+	@find "$(BIN_HOME)/logs" -name 'optimizer-local-test-*' -exec rm -rf {} + 2>/dev/null || true
+	@echo "Building all modules..."
+	@$(MVN) clean install -DskipTests -Drat.skip=true -Dmaven.clean.failOnError=false -B -ntp
+	@$(MAKE) sync-libs
+
+sync-libs:
+	@if [ ! -f "$(DIST_TAR)" ]; then \
+		echo "ERROR: $(DIST_TAR) not found. Run 'make build' first."; \
+		exit 1; \
+	fi
+	@rm -rf "$(RUNTIME_HOME)"
+	@tar -xzf "$(DIST_TAR)" -C "$(CURDIR)/dist/target"
+	@rm -rf "$(BIN_HOME)/lib"
+	@cp -R "$(RUNTIME_HOME)/lib" "$(BIN_HOME)/lib"
+	@echo "Synced optimizer libs → $(BIN_HOME)/lib"
+
+# ---------------------------------------------------------------------------
+# Debug mode (IDE workflow)
+# ---------------------------------------------------------------------------
+
+setup-debug-mode: start-deps build
 	@echo ""
+	@echo "Setup complete. Run 'AmoroServiceContainer' from your IDE. See .vscode/debug.md"
+
+clean-debug-mode: stop-deps
+	@rm -rf "$(RUNTIME_HOME)"
+	@echo "Teardown complete."
+
+# ---------------------------------------------------------------------------
+# Docker
+# ---------------------------------------------------------------------------
+
+start-deps:
+	@echo "Starting local dependencies (Postgres & Minio)..."
+	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile dev up -d
+
+stop-deps:
+	@echo "Stopping local dependencies..."
+	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile dev down
 
 start-fusion-docker:
 	@echo "Starting Fusion (Kind cluster + all services)..."
 	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile prod up -d
-	@echo ""
-	@echo "Exporting Kind kubeconfig to host..."
 	@kind export kubeconfig --name $(KIND_CLUSTER) 2>/dev/null
 
 clean-fusion-docker:
-	@echo "Removing Kind clusters..."
-	@kind delete cluster --name $(KIND_CLUSTER) 2>/dev/null 
-	@kind delete cluster --name fusion-spark-cluster 2>/dev/null
-	@echo "Removing Docker services and volumes..."
+	@kind delete cluster --name $(KIND_CLUSTER) 2>/dev/null || true
+	@kind delete cluster --name fusion-spark-cluster 2>/dev/null || true
 	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile prod down -v
 	@echo "Teardown complete."
 
-start-deps:
-	@echo "Starting local dependencies (Postgres & Minio)..."
-	@docker compose -f docker/kind/docker-compose.yml --profile dev up -d
-
-stop-deps:
-	@echo "Stopping local dependencies (Postgres & Minio)..."
-	@docker compose -f docker/kind/docker-compose.yml --profile dev down
-
-prepare-debug-runtime:
-	@if [ -z "$(JAVA_HOME_17)" ]; then \
-		echo "ERROR: JDK 17 not found. Install JDK 17 or point JAVA_HOME at a JDK 17 installation."; \
-		exit 1; \
-	fi
-	@echo "Using JDK 17: $(JAVA_HOME_17)"
-	@echo "Cleaning up stale optimizer logs (prevents RAT license check failure)..."
-	@rm -rf "$(AMORO_BIN_HOME)/logs/optimizer-local-test-"*
-	@echo "Building and installing all modules to local Maven repo (~/.m2)..."
-	@JAVA_HOME="$(JAVA_HOME_17)" PATH="$(JAVA_HOME_17)/bin:$(PATH)" \
-		./mvnw clean install -DskipTests -Drat.skip=true -Dmaven.clean.failOnError=false -B -ntp
-	@$(MAKE) prepare-optimizer-lib
-
-prepare-optimizer-lib:
-	@if [ ! -f "$(AMORO_DIST_TAR)" ]; then \
-		echo "Missing distribution tar: $(AMORO_DIST_TAR)"; \
-		echo "Build it first with: mvn -DskipTests package"; \
-		exit 1; \
-	fi
-	@mkdir -p "$(CURDIR)/dist/target"
-	@rm -rf "$(AMORO_RUNTIME_HOME)"
-	@tar -xzf "$(AMORO_DIST_TAR)" -C "$(CURDIR)/dist/target"
-	@rm -rf "$(AMORO_BIN_HOME)/lib"
-	@cp -R "$(AMORO_RUNTIME_HOME)/lib" "$(AMORO_BIN_HOME)/lib"
-	@echo "Synced optimizer libs to: $(AMORO_BIN_HOME)"
-
-setup-debug-mode:
-	@echo "Setting up debug mode (deps + build + install to ~/.m2 + lib sync)..."
-	@$(MAKE) start-deps
-	@$(MAKE) prepare-debug-runtime
-	@echo ""
-	@echo "Setup complete."
-	@echo "Next: reload VS Code Java project, then run 'AmoroServiceContainer' from launch.json. Follow .vscode/debug.md"
-
-clean-debug-mode:
-	@echo "Tearing down debug mode (deps + extracted runtime cleanup)..."
-	@$(MAKE) stop-deps
-	@rm -rf "$(AMORO_RUNTIME_HOME)"
-	@echo "Teardown complete."
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
 
 spotless-fix:
-	@echo "Running Spotless auto-fix (Google Java Format + import ordering)..."
-	@./mvnw spotless:apply -B -ntp
-	@echo "Spotless fix complete."
+	@$(MVN) spotless:apply -B -ntp
 
 sync-frontend:
-	@echo "Syncing frontend assets from src/main/resources/static → target/classes/static ..."
 	@SRC=amoro-web/src/main/resources/static; \
 	DST=amoro-web/target/classes/static; \
 	if [ ! -d "$$SRC" ]; then \
@@ -138,4 +143,4 @@ sync-frontend:
 	fi; \
 	mkdir -p "$$DST"; \
 	cp -r "$$SRC"/. "$$DST"/
-	@echo "Done. Refresh http://localhost:1630 in your browser."
+	@echo "Frontend synced. Refresh http://localhost:1630"

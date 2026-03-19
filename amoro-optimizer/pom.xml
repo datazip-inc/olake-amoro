@@ -33,7 +33,6 @@
 
     <modules>
         <module>amoro-optimizer-common</module>
-        <module>amoro-optimizer-flink</module>
         <module>amoro-optimizer-spark</module>
         <module>amoro-optimizer-standalone</module>
     </modules>
