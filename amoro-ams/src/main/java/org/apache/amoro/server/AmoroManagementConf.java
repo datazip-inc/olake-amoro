@@ -111,11 +111,12 @@ public class AmoroManagementConf {
           .defaultValue(1000000)
           .withDescription("The queue size of the executors of the external catalog explorer.");
 
-  public static final ConfigOption<Boolean> EXPIRE_SNAPSHOTS_ENABLED =  // TODO: will be enabled with cleaning feature
+  public static final ConfigOption<Boolean>
+      EXPIRE_SNAPSHOTS_ENABLED = // TODO: will be enabled with cleaning feature
       ConfigOptions.key("expire-snapshots.enabled")
-          .booleanType()
-          .defaultValue(false)
-          .withDescription("Enable snapshots expiring.");
+              .booleanType()
+              .defaultValue(false)
+              .withDescription("Enable snapshots expiring.");
 
   public static final ConfigOption<Integer> EXPIRE_SNAPSHOTS_THREAD_COUNT =
       ConfigOptions.key("expire-snapshots.thread-count")

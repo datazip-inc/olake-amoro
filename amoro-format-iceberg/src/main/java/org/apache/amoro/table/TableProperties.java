@@ -118,8 +118,8 @@ public class TableProperties {
 
   /**
    * Cron expression (5-field Unix format: minute hour dom month dow) that controls when minor
-   * compaction is triggered. Example: {@code "0 * * * *"} triggers every hour on the hour.
-   * Default: {@code null} (disabled).
+   * compaction is triggered. Example: {@code "0 * * * *"} triggers every hour on the hour. Default:
+   * {@code null} (disabled).
    */
   public static final String SELF_OPTIMIZING_MINOR_TRIGGER_CRON =
       "self-optimizing.minor.trigger.cron";
@@ -132,9 +132,8 @@ public class TableProperties {
       "self-optimizing.major.trigger.cron";
 
   /**
-   * Cron expression (5-field Unix format) that controls when full compaction is triggered.
-   * Example: {@code "0 0 * * 0"} triggers every Sunday at midnight. Default: {@code null}
-   * (disabled).
+   * Cron expression (5-field Unix format) that controls when full compaction is triggered. Example:
+   * {@code "0 0 * * 0"} triggers every Sunday at midnight. Default: {@code null} (disabled).
    */
   public static final String SELF_OPTIMIZING_FULL_TRIGGER_CRON =
       "self-optimizing.full.trigger.cron";

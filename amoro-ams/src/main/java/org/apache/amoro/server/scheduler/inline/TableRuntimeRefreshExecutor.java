@@ -44,8 +44,8 @@ import org.apache.amoro.utils.CronUtils;
  *   <li>For each fired cron, checks whether the optimization is still "necessary":
  *       <ul>
  *         <li>A type is <em>unnecessary</em> when the snapshot has not changed since the last
- *             optimization AND the last optimization type already covers this type
- *             (FULL covers all; MAJOR covers major + minor; MINOR covers only minor).
+ *             optimization AND the last optimization type already covers this type (FULL covers
+ *             all; MAJOR covers major + minor; MINOR covers only minor).
  *       </ul>
  *   <li>If necessary → transitions the table to PENDING so {@code OptimizingQueue} will plan it.
  *   <li>If unnecessary → writes a {@link ProcessStatus#SKIPPED} record and falls through to the
@@ -135,8 +135,8 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
     boolean scheduled = false;
     OptimizingType scheduledType = null;
 
-    for (OptimizingType candidate : new OptimizingType[] {
-        OptimizingType.FULL, OptimizingType.MAJOR, OptimizingType.MINOR}) {
+    for (OptimizingType candidate :
+        new OptimizingType[] {OptimizingType.FULL, OptimizingType.MAJOR, OptimizingType.MINOR}) {
 
       String cronExpr = cronExpressionFor(cfg, candidate);
       long lastOptimizingTime = lastOptimizingTimeFor(tableRuntime, candidate);
@@ -149,21 +149,24 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
       if (!scheduled && (snapshotChanged || isNecessary(candidate, lastType))) {
         // Cron fired AND optimization is necessary — mark the table as pending.
         logger.info(
-          "[cron-trigger] table={} scheduling {} optimization (snapshotChanged={}, lastType={})",
-          tableRuntime.getTableIdentifier(),
-          candidate,
-          snapshotChanged,
-          lastType);
+            "[cron-trigger] table={} scheduling {} optimization (snapshotChanged={}, lastType={})",
+            tableRuntime.getTableIdentifier(),
+            candidate,
+            snapshotChanged,
+            lastType);
         tableRuntime.markAsPending(candidate);
         scheduled = true;
         scheduledType = candidate;
         continue;
       }
 
-      // Cron fired but there is nothing new to optimize at this level, or a higher priority optimization is already scheduled.
+      // Cron fired but there is nothing new to optimize at this level, or a higher priority
+      // optimization is already scheduled.
       String reason;
       if (scheduled) {
-        reason = String.format("skipped because higher priority %s optimization is scheduled", scheduledType);
+        reason =
+            String.format(
+                "skipped because higher priority %s optimization is scheduled", scheduledType);
       } else {
         reason = buildSkipReason(candidate, lastType);
       }
@@ -224,19 +227,27 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
 
   private String cronExpressionFor(OptimizingConfig cfg, OptimizingType type) {
     switch (type) {
-      case FULL:  return cfg.getFullTriggerCron();
-      case MAJOR: return cfg.getMajorTriggerCron();
-      case MINOR: return cfg.getMinorTriggerCron();
-      default:    return null;
+      case FULL:
+        return cfg.getFullTriggerCron();
+      case MAJOR:
+        return cfg.getMajorTriggerCron();
+      case MINOR:
+        return cfg.getMinorTriggerCron();
+      default:
+        return null;
     }
   }
 
   private long lastOptimizingTimeFor(DefaultTableRuntime tableRuntime, OptimizingType type) {
     switch (type) {
-      case FULL:  return tableRuntime.getLastFullOptimizingTime();
-      case MAJOR: return tableRuntime.getLastMajorOptimizingTime();
-      case MINOR: return tableRuntime.getLastMinorOptimizingTime();
-      default:    return 0L;
+      case FULL:
+        return tableRuntime.getLastFullOptimizingTime();
+      case MAJOR:
+        return tableRuntime.getLastMajorOptimizingTime();
+      case MINOR:
+        return tableRuntime.getLastMinorOptimizingTime();
+      default:
+        return 0L;
     }
   }
 }

@@ -30,8 +30,7 @@ import java.util.BitSet;
  * Lightweight utility for evaluating whether a cron expression has fired in a given time window,
  * and for converting a cron expression to the equivalent repeat interval in milliseconds.
  *
- * <p>Supports standard 5-field Unix cron format: {@code minute hour day-of-month month
- * day-of-week}
+ * <p>Supports standard 5-field Unix cron format: {@code minute hour day-of-month month day-of-week}
  *
  * <p>Examples:
  *
@@ -55,8 +54,8 @@ public final class CronUtils {
   // ── public API ──────────────────────────────────────────────────────────────
 
   /**
-   * Converts a 5-field UNIX cron expression to the interval in milliseconds between two
-   * consecutive firings (the period of the schedule).
+   * Converts a 5-field UNIX cron expression to the interval in milliseconds between two consecutive
+   * firings (the period of the schedule).
    *
    * <p>The interval is computed by finding the first two upcoming fire times from the current
    * minute and measuring the gap. For a uniform periodic expression such as {@code "* /3 * * * *"}
@@ -90,14 +89,13 @@ public final class CronUtils {
   }
 
   /**
-   * Returns true if the cron expression fired at least once in the half-open interval
-   * {@code (lastFiredMs, currentTimeMs]}.
+   * Returns true if the cron expression fired at least once in the half-open interval {@code
+   * (lastFiredMs, currentTimeMs]}.
    *
    * <p>If {@code cronExpr} is {@code null} or blank, always returns {@code false}.
    *
-   * <p>To avoid scanning an arbitrarily large window (e.g. when a table has never been
-   * compacted), the search is capped at {@value #MAX_SEARCH_WINDOW_MS} ms before
-   * {@code currentTimeMs}.
+   * <p>To avoid scanning an arbitrarily large window (e.g. when a table has never been compacted),
+   * the search is capped at {@value #MAX_SEARCH_WINDOW_MS} ms before {@code currentTimeMs}.
    */
   public static boolean hasFiredSince(String cronExpr, long lastFiredMs, long currentTimeMs) {
     if (cronExpr == null || cronExpr.trim().isEmpty()) {
@@ -118,7 +116,8 @@ public final class CronUtils {
     LocalDateTime end = LocalDateTime.ofInstant(Instant.ofEpochMilli(currentTimeMs), zone);
 
     // After truncating to a minute boundary the candidate may fall at or before lastFiredMs
-    // (e.g. effectiveStartMs = 20:06:45.339 → candidate = 20:06:00, but lastFiredMs = 20:06:45.338).
+    // (e.g. effectiveStartMs = 20:06:45.339 → candidate = 20:06:00, but lastFiredMs =
+    // 20:06:45.338).
     // We must only count fires strictly after lastFiredMs, so advance past that point.
     LocalDateTime lastFiredDt = LocalDateTime.ofInstant(Instant.ofEpochMilli(lastFiredMs), zone);
     if (!candidate.isAfter(lastFiredDt)) {
@@ -155,17 +154,14 @@ public final class CronUtils {
 
     /** Supported field ranges: minute(0-59), hour(0-23), dom(1-31), month(1-12), dow(0-6). */
     private final BitSet minutes;
+
     private final BitSet hours;
     private final BitSet daysOfMonth;
     private final BitSet months;
     private final BitSet daysOfWeek;
 
     private CronFields(
-        BitSet minutes,
-        BitSet hours,
-        BitSet daysOfMonth,
-        BitSet months,
-        BitSet daysOfWeek) {
+        BitSet minutes, BitSet hours, BitSet daysOfMonth, BitSet months, BitSet daysOfWeek) {
       this.minutes = minutes;
       this.hours = hours;
       this.daysOfMonth = daysOfMonth;

@@ -46,9 +46,9 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * <ul>
  *   <li>It is not already being processed (FULL/MAJOR/MINOR_OPTIMIZING, COMMITTING) or planned.
- *   <li>Its status is {@link OptimizingStatus#PENDING} — meaning the cron-tick scheduler in
- *       {@code TableRuntimeRefreshExecutor} already determined that a cron expression fired and
- *       the optimization is necessary.
+ *   <li>Its status is {@link OptimizingStatus#PENDING} — meaning the cron-tick scheduler in {@code
+ *       TableRuntimeRefreshExecutor} already determined that a cron expression fired and the
+ *       optimization is necessary.
  * </ul>
  *
  * <p>Cron evaluation, "not necessary" skip logic, and SKIPPED record creation are all handled

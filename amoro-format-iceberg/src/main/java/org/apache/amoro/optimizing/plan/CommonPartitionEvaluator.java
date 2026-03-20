@@ -26,9 +26,9 @@ import org.apache.amoro.optimizing.HealthScoreInfo;
 import org.apache.amoro.optimizing.OptimizingType;
 import org.apache.amoro.optimizing.evaluation.MetadataBasedEvaluationEvent;
 import org.apache.amoro.shade.guava32.com.google.common.base.MoreObjects;
-import org.apache.amoro.utils.CronUtils;
 import org.apache.amoro.shade.guava32.com.google.common.base.Preconditions;
 import org.apache.amoro.shade.guava32.com.google.common.collect.Sets;
+import org.apache.amoro.utils.CronUtils;
 import org.apache.amoro.utils.TableFileUtil;
 import org.apache.iceberg.ContentFile;
 import org.apache.iceberg.DataFile;
@@ -425,8 +425,8 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   }
 
   /**
-   * Returns {@code true} if the cron expression has fired at least once since the last
-   * optimization time. Returns {@code false} when no cron is configured (disabled by default).
+   * Returns {@code true} if the cron expression has fired at least once since the last optimization
+   * time. Returns {@code false} when no cron is configured (disabled by default).
    */
   private static boolean reachTrigger(String cronExpr, long planTime, long lastOptimizingTime) {
     return CronUtils.hasFiredSince(cronExpr, lastOptimizingTime, planTime);

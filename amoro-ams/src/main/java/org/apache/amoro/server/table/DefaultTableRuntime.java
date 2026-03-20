@@ -75,6 +75,8 @@ public class DefaultTableRuntime extends AbstractTableRuntime
 
   private static final Logger LOG = LoggerFactory.getLogger(DefaultTableRuntime.class);
 
+  private static final SnowflakeIdGenerator ID_GENERATOR = new SnowflakeIdGenerator();
+
   private static final StateKey<TableRuntimeOptimizingState> OPTIMIZING_STATE_KEY =
       StateKey.stateKey("optimizing_state")
           .jsonType(TableRuntimeOptimizingState.class)
@@ -444,7 +446,8 @@ public class DefaultTableRuntime extends AbstractTableRuntime
               // Always advance the per-type timing regardless of success/failure.
               // This ensures the cron interval acts as a natural retry backoff: without this, a
               // failed optimization would leave lastXxxOptimizingTime at 0, causing hasFiredSince()
-              // to return true on every 1-minute tick and rescheduling the optimization every minute.
+              // to return true on every 1-minute tick and rescheduling the optimization every
+              // minute.
               if (processType == OptimizingType.MINOR) {
                 state.setLastMinorOptimizingTime(optimizingProcess.getPlanTime());
               } else if (processType == OptimizingType.MAJOR) {
@@ -469,6 +472,12 @@ public class DefaultTableRuntime extends AbstractTableRuntime
     if (needUpdate) {
       OptimizingType cronType = this.pendingCronType;
       long now = System.currentTimeMillis();
+      if (cronType != null) {
+        recordSkippedOptimization(
+            cronType,
+            String.format(
+                "cron fired for %s but planner evaluated and found no data to process", cronType));
+      }
       store()
           .begin()
           .updateStatusCode(code -> OptimizingStatus.IDLE.getCode())
@@ -512,8 +521,8 @@ public class DefaultTableRuntime extends AbstractTableRuntime
 
   /**
    * Transitions this table from IDLE to PENDING without performing a file scan. Used by the
-   * cron-tick scheduler after determining that an optimization type is eligible and necessary.
-   * The actual file analysis is deferred to the planner inside {@code OptimizingQueue.planInternal}.
+   * cron-tick scheduler after determining that an optimization type is eligible and necessary. The
+   * actual file analysis is deferred to the planner inside {@code OptimizingQueue.planInternal}.
    *
    * @param cronType the optimization type whose cron triggered this transition — stored so that
    *     {@link #completeEmptyProcess()} can update the correct per-type timestamp when the planner
@@ -538,8 +547,8 @@ public class DefaultTableRuntime extends AbstractTableRuntime
   }
 
   /**
-   * Writes a {@link ProcessStatus#SKIPPED} record to the {@code table_process} table so that the
-   * UI can show why a cron-triggered optimization did not run. Both the insert and the subsequent
+   * Writes a {@link ProcessStatus#SKIPPED} record to the {@code table_process} table so that the UI
+   * can show why a cron-triggered optimization did not run. Both the insert and the subsequent
    * update (which sets {@code finish_time} and {@code fail_message}) run in a single transaction so
    * a partial write can never occur.
    *
@@ -548,7 +557,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
    */
   public void recordSkippedOptimization(OptimizingType type, String reason) {
     long now = System.currentTimeMillis();
-    long processId = new SnowflakeIdGenerator().generateId();
+    long processId = ID_GENERATOR.generateId();
     Map<String, String> summary = new java.util.HashMap<>();
     summary.put("skipReason", reason);
     summary.put("optimizingType", type.name());
@@ -676,7 +685,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
     if (!optimizingConfig.isEnabled()) {
       return true;
     }
-    
+
     MixedTable table = (MixedTable) amoroTable.originalTable();
     tableSummaryMetrics.refreshSnapshots(table);
     long lastSnapshotId = state.getCurrentSnapshotId();
