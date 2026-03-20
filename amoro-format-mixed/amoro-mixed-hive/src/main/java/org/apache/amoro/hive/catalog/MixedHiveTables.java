@@ -188,11 +188,6 @@ public class MixedHiveTables {
     fillTableProperties(tableMeta);
     String hiveLocation =
         tableMeta.getProperties().get(HiveTableProperties.BASE_HIVE_LOCATION_ROOT);
-    // Default 1 day
-    if (!tableMeta.properties.containsKey(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL)) {
-      tableMeta.putToProperties(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL, "86400000");
-    }
-
     AuthenticatedHadoopFileIO fileIO =
         AuthenticatedFileIOs.buildRecoverableHadoopFileIO(
             tableIdentifier,

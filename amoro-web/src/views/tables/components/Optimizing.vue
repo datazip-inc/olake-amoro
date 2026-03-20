@@ -35,6 +35,7 @@ const statusMap = {
   CLOSED: { title: 'CLOSED', color: '#c9cdd4' },
   SUCCESS: { title: 'SUCCESS', color: '#0ad787' },
   FAILED: { title: 'FAILED', color: '#f5222d' },
+  SKIPPED: { title: 'SKIPPED', color: '#fa8c16' },
 }
 const STATUS_CONFIG = shallowReactive(statusMap)
 
@@ -292,7 +293,7 @@ onMounted(() => {
               />
               <span>{{ record.status }}</span>
               <a-tooltip
-                v-if="record.status === 'FAILED'" placement="topRight" class="g-ml-4"
+                v-if="record.status === 'FAILED' || record.status === 'SKIPPED'" placement="topRight" class="g-ml-4"
                 overlay-class-name="table-failed-tip"
               >
                 <template #title>

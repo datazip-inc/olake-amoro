@@ -384,7 +384,7 @@ public abstract class MixedTablePlanTestBase extends TableTestBase {
   protected void closeFullOptimizingInterval() {
     getMixedTable()
         .updateProperties()
-        .set(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL, "-1")
+        .set(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON, "")
         .commit();
   }
 
@@ -399,7 +399,7 @@ public abstract class MixedTablePlanTestBase extends TableTestBase {
   protected void closeMinorOptimizingInterval() {
     getMixedTable()
         .updateProperties()
-        .set(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_INTERVAL, "-1")
+        .set(TableProperties.SELF_OPTIMIZING_MINOR_TRIGGER_CRON, "")
         .commit();
   }
 
@@ -428,7 +428,7 @@ public abstract class MixedTablePlanTestBase extends TableTestBase {
   protected void openFullOptimizing() {
     getMixedTable()
         .updateProperties()
-        .set(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_INTERVAL, "3600")
+        .set(TableProperties.SELF_OPTIMIZING_FULL_TRIGGER_CRON, "0 0 * * *")
         .commit();
   }
 

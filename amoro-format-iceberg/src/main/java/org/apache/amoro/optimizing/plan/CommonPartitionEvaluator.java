@@ -26,6 +26,7 @@ import org.apache.amoro.optimizing.HealthScoreInfo;
 import org.apache.amoro.optimizing.OptimizingType;
 import org.apache.amoro.optimizing.evaluation.MetadataBasedEvaluationEvent;
 import org.apache.amoro.shade.guava32.com.google.common.base.MoreObjects;
+import org.apache.amoro.utils.CronUtils;
 import org.apache.amoro.shade.guava32.com.google.common.base.Preconditions;
 import org.apache.amoro.shade.guava32.com.google.common.collect.Sets;
 import org.apache.amoro.utils.TableFileUtil;
@@ -116,11 +117,9 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     this.lastMajorOptimizingTime = lastMajorOptimizingTime;
     this.lastFullOptimizingTime = lastFullOptimizingTime;
     this.reachMajorInterval =
-        config.getMajorTriggerInterval() >= 0
-            && planTime - lastMajorOptimizingTime > config.getMajorTriggerInterval();
+        reachTrigger(config.getMajorTriggerCron(), planTime, lastMajorOptimizingTime);
     this.reachFullInterval =
-        config.getFullTriggerInterval() >= 0
-            && planTime - lastFullOptimizingTime > config.getFullTriggerInterval();
+        reachTrigger(config.getFullTriggerCron(), planTime, lastFullOptimizingTime);
   }
 
   @Override
@@ -344,11 +343,11 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
           return false;
         }
       }
-      if (isFullOptimizing()) {
-        necessary = isFullNecessary();
-      } else {
-        necessary = isMajorNecessary() || isMinorNecessary();
-      }
+      // Priority cascade: full > major > minor.
+      // Each type independently evaluates its own cron + data conditions.
+      // If full cron fired but data conditions are not met, we still fall through to
+      // major and minor rather than skipping them entirely.
+      necessary = isFullNecessary() || isMajorNecessary() || isMinorNecessary();
       LOG.debug("{} necessary = {}, {}", name(), necessary, this);
     }
     return necessary;
@@ -418,12 +417,19 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   }
 
   protected boolean reachMinorInterval() {
-    return config.getMinorLeastInterval() >= 0
-        && planTime - lastMinorOptimizingTime > config.getMinorLeastInterval();
+    return reachTrigger(config.getMinorTriggerCron(), planTime, lastMinorOptimizingTime);
   }
 
   protected boolean reachFullInterval() {
     return reachFullInterval;
+  }
+
+  /**
+   * Returns {@code true} if the cron expression has fired at least once since the last
+   * optimization time. Returns {@code false} when no cron is configured (disabled by default).
+   */
+  private static boolean reachTrigger(String cronExpr, long planTime, long lastOptimizingTime) {
+    return CronUtils.hasFiredSince(cronExpr, lastOptimizingTime, planTime);
   }
 
   public boolean isFullNecessary() {

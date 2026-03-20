@@ -41,6 +41,7 @@ import org.apache.amoro.server.optimizing.TaskRuntime;
 import org.apache.amoro.server.persistence.mapper.OptimizerMapper;
 import org.apache.amoro.server.persistence.mapper.OptimizingProcessMapper;
 import org.apache.amoro.server.persistence.mapper.TableBlockerMapper;
+import org.apache.amoro.server.persistence.mapper.TableProcessMapper;
 import org.apache.amoro.server.resource.OptimizerInstance;
 import org.apache.amoro.server.table.blocker.TableBlocker;
 import org.apache.amoro.server.table.cleanup.CleanupOperation;
@@ -102,6 +103,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
   private final TableSummaryMetrics tableSummaryMetrics;
   private volatile long lastPlanTime;
   private volatile OptimizingProcess optimizingProcess;
+  private volatile OptimizingType pendingCronType;
   private final List<TaskRuntime.TaskQuota> taskQuotas = new CopyOnWriteArrayList<>();
 
   public DefaultTableRuntime(TableRuntimeStore store) {
@@ -199,6 +201,22 @@ public class DefaultTableRuntime extends AbstractTableRuntime
 
   public long getLastMinorOptimizingTime() {
     return store().getState(OPTIMIZING_STATE_KEY).getLastMinorOptimizingTime();
+  }
+
+  /**
+   * Returns the type of the last successfully completed optimization, or {@code null} if none has
+   * ever run. Used by the cron-tick scheduler to determine which types are still "necessary".
+   */
+  public OptimizingType getLastOptimizingType() {
+    String raw = store().getState(OPTIMIZING_STATE_KEY).getLastOptimizingType();
+    if (raw == null || raw.isEmpty()) {
+      return null;
+    }
+    try {
+      return OptimizingType.valueOf(raw);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   public long getLastOptimizedChangeSnapshotId() {
@@ -414,8 +432,19 @@ public class DefaultTableRuntime extends AbstractTableRuntime
         .updateState(
             OPTIMIZING_STATE_KEY,
             state -> {
-              state.setLastOptimizedSnapshotId(optimizingProcess.getTargetSnapshotId());
-              state.setLastOptimizedChangeSnapshotId(optimizingProcess.getTargetChangeSnapshotId());
+              if (success) {
+                // Only advance the snapshot checkpoints on success. Leaving them at their previous
+                // values on failure ensures the next cron tick sees a snapshot change and
+                // re-schedules the optimization instead of treating the table as already optimized.
+                state.setLastOptimizedSnapshotId(optimizingProcess.getTargetSnapshotId());
+                state.setLastOptimizedChangeSnapshotId(
+                    optimizingProcess.getTargetChangeSnapshotId());
+                state.setLastOptimizingType(processType.name());
+              }
+              // Always advance the per-type timing regardless of success/failure.
+              // This ensures the cron interval acts as a natural retry backoff: without this, a
+              // failed optimization would leave lastXxxOptimizingTime at 0, causing hasFiredSince()
+              // to return true on every 1-minute tick and rescheduling the optimization every minute.
               if (processType == OptimizingType.MINOR) {
                 state.setLastMinorOptimizingTime(optimizingProcess.getPlanTime());
               } else if (processType == OptimizingType.MAJOR) {
@@ -430,6 +459,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
 
     optimizingMetrics.processComplete(processType, success, optimizingProcess.getPlanTime());
     optimizingProcess = null;
+    this.pendingCronType = null;
   }
 
   public void completeEmptyProcess() {
@@ -437,6 +467,8 @@ public class DefaultTableRuntime extends AbstractTableRuntime
     boolean needUpdate =
         originalStatus == OptimizingStatus.PLANNING || originalStatus == OptimizingStatus.PENDING;
     if (needUpdate) {
+      OptimizingType cronType = this.pendingCronType;
+      long now = System.currentTimeMillis();
       store()
           .begin()
           .updateStatusCode(code -> OptimizingStatus.IDLE.getCode())
@@ -445,10 +477,21 @@ public class DefaultTableRuntime extends AbstractTableRuntime
               state -> {
                 state.setLastOptimizedSnapshotId(state.getCurrentSnapshotId());
                 state.setLastOptimizedChangeSnapshotId(state.getCurrentChangeSnapshotId());
+                if (cronType != null) {
+                  if (cronType == OptimizingType.MINOR) {
+                    state.setLastMinorOptimizingTime(now);
+                  } else if (cronType == OptimizingType.MAJOR) {
+                    state.setLastMajorOptimizingTime(now);
+                  } else if (cronType == OptimizingType.FULL) {
+                    state.setLastFullOptimizingTime(now);
+                  }
+                  state.setLastOptimizingType(cronType.name());
+                }
                 return state;
               })
           .updateState(PENDING_INPUT_KEY, any -> new AbstractOptimizingEvaluator.PendingInput())
           .commit();
+      this.pendingCronType = null;
     }
   }
 
@@ -465,6 +508,97 @@ public class DefaultTableRuntime extends AbstractTableRuntime
               })
           .commit();
     }
+  }
+
+  /**
+   * Transitions this table from IDLE to PENDING without performing a file scan. Used by the
+   * cron-tick scheduler after determining that an optimization type is eligible and necessary.
+   * The actual file analysis is deferred to the planner inside {@code OptimizingQueue.planInternal}.
+   *
+   * @param cronType the optimization type whose cron triggered this transition — stored so that
+   *     {@link #completeEmptyProcess()} can update the correct per-type timestamp when the planner
+   *     determines no work is needed.
+   */
+  public void markAsPending(OptimizingType cronType) {
+    this.pendingCronType = cronType;
+    store()
+        .begin()
+        .updateStatusCode(
+            code -> {
+              if (code == OptimizingStatus.IDLE.getCode()) {
+                LOG.info(
+                    "{} status changed from idle to pending (cron-triggered, type={})",
+                    getTableIdentifier(),
+                    cronType);
+                return OptimizingStatus.PENDING.getCode();
+              }
+              return code;
+            })
+        .commit();
+  }
+
+  /**
+   * Writes a {@link ProcessStatus#SKIPPED} record to the {@code table_process} table so that the
+   * UI can show why a cron-triggered optimization did not run. Both the insert and the subsequent
+   * update (which sets {@code finish_time} and {@code fail_message}) run in a single transaction so
+   * a partial write can never occur.
+   *
+   * @param type the optimization type whose cron fired
+   * @param reason human-readable skip reason
+   */
+  public void recordSkippedOptimization(OptimizingType type, String reason) {
+    long now = System.currentTimeMillis();
+    long processId = new SnowflakeIdGenerator().generateId();
+    Map<String, String> summary = new java.util.HashMap<>();
+    summary.put("skipReason", reason);
+    summary.put("optimizingType", type.name());
+    doAs(
+        TableProcessMapper.class,
+        mapper -> {
+          mapper.insertProcess(
+              getTableIdentifier().getId(),
+              processId,
+              "",
+              ProcessStatus.SKIPPED,
+              type.name().toUpperCase(),
+              ProcessStatus.SKIPPED.name().toLowerCase(),
+              "AMORO",
+              0,
+              now,
+              new java.util.HashMap<>(),
+              summary);
+          mapper.updateProcess(
+              getTableIdentifier().getId(),
+              processId,
+              "",
+              ProcessStatus.SKIPPED,
+              ProcessStatus.SKIPPED.name().toLowerCase(),
+              0,
+              now,
+              reason,
+              new java.util.HashMap<>(),
+              summary);
+        });
+    store()
+        .begin()
+        .updateState(
+            OPTIMIZING_STATE_KEY,
+            state -> {
+              if (type == OptimizingType.MINOR) {
+                state.setLastMinorOptimizingTime(now);
+              } else if (type == OptimizingType.MAJOR) {
+                state.setLastMajorOptimizingTime(now);
+              } else if (type == OptimizingType.FULL) {
+                state.setLastFullOptimizingTime(now);
+              }
+              return state;
+            })
+        .commit();
+    LOG.info(
+        "[cron-skip] table={} type={} skip record persisted, reason: {}",
+        getTableIdentifier(),
+        type,
+        reason);
   }
 
   public void beginCommitting() {

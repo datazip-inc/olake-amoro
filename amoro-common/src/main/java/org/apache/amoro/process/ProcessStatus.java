@@ -29,7 +29,9 @@ public enum ProcessStatus {
   CANCELED,
   CLOSED,
   KILLED,
-  FAILED;
+  FAILED,
+  /** Cron fired but the optimization was determined unnecessary; recorded for UI visibility. */
+  SKIPPED;
 
   public ProcessStage toStage() {
     return new ProcessStage(name(), ordinal());

@@ -95,7 +95,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Duration> REFRESH_EXTERNAL_CATALOGS_INTERVAL =
       ConfigOptions.key("refresh-external-catalogs.interval")
           .durationType()
-          .defaultValue(Duration.ofMinutes(3))
+          .defaultValue(Duration.ofMinutes(1))
           .withDescription("Interval to refresh the external catalog.");
 
   public static final ConfigOption<Integer> REFRESH_EXTERNAL_CATALOGS_THREAD_COUNT =

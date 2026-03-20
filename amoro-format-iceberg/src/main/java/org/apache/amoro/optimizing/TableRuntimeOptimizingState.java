@@ -28,6 +28,12 @@ public class TableRuntimeOptimizingState {
   private long lastMajorOptimizingTime;
   private long lastFullOptimizingTime;
   private long lastMinorOptimizingTime;
+  /**
+   * Name of the {@code OptimizingType} that last completed successfully (FULL, MAJOR, or MINOR).
+   * {@code null} when no optimization has ever run. Stored as a String so that the JSON blob
+   * remains backward-compatible when new types are added.
+   */
+  private String lastOptimizingType;
 
   public long getCurrentSnapshotId() {
     return currentSnapshotId;
@@ -83,5 +89,13 @@ public class TableRuntimeOptimizingState {
 
   public void setLastMinorOptimizingTime(long lastMinorOptimizingTime) {
     this.lastMinorOptimizingTime = lastMinorOptimizingTime;
+  }
+
+  public String getLastOptimizingType() {
+    return lastOptimizingType;
+  }
+
+  public void setLastOptimizingType(String lastOptimizingType) {
+    this.lastOptimizingType = lastOptimizingType;
   }
 }
