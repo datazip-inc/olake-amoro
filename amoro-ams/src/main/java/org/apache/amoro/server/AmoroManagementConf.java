@@ -111,10 +111,10 @@ public class AmoroManagementConf {
           .defaultValue(1000000)
           .withDescription("The queue size of the executors of the external catalog explorer.");
 
-  public static final ConfigOption<Boolean> EXPIRE_SNAPSHOTS_ENABLED =
+  public static final ConfigOption<Boolean> EXPIRE_SNAPSHOTS_ENABLED =  // TODO: will be enabled with cleaning feature
       ConfigOptions.key("expire-snapshots.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false)
           .withDescription("Enable snapshots expiring.");
 
   public static final ConfigOption<Integer> EXPIRE_SNAPSHOTS_THREAD_COUNT =
@@ -132,7 +132,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> CLEAN_ORPHAN_FILES_ENABLED =
       ConfigOptions.key("clean-orphan-files.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false)
           .withDescription("Enable orphan files cleaning.");
 
   public static final ConfigOption<Integer> CLEAN_ORPHAN_FILES_THREAD_COUNT =
@@ -150,7 +150,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> CLEAN_DANGLING_DELETE_FILES_ENABLED =
       ConfigOptions.key("clean-dangling-delete-files.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false)
           .withDescription("Enable dangling delete files cleaning.");
 
   public static final ConfigOption<Integer> CLEAN_DANGLING_DELETE_FILES_THREAD_COUNT =
@@ -186,7 +186,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> AUTO_CREATE_TAGS_ENABLED =
       ConfigOptions.key("auto-create-tags.enabled")
           .booleanType()
-          .defaultValue(true)
+          .defaultValue(false)
           .withDescription("Enable creating tags.");
 
   public static final ConfigOption<Integer> AUTO_CREATE_TAGS_THREAD_COUNT =

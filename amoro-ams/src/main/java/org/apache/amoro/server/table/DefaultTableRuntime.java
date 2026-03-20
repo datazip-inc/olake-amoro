@@ -672,6 +672,11 @@ public class DefaultTableRuntime extends AbstractTableRuntime
   }
 
   private boolean refreshSnapshots(AmoroTable<?> amoroTable, TableRuntimeOptimizingState state) {
+    OptimizingConfig optimizingConfig = this.getOptimizingConfig();
+    if (!optimizingConfig.isEnabled()) {
+      return true;
+    }
+    
     MixedTable table = (MixedTable) amoroTable.originalTable();
     tableSummaryMetrics.refreshSnapshots(table);
     long lastSnapshotId = state.getCurrentSnapshotId();
