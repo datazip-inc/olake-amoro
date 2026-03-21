@@ -37,10 +37,10 @@ jobs:
           fetch-depth: 0
 
       - name: Check modifications header
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
         run: |
           echo "Checking modified files..."
-
-          BASE_BRANCH=${{ github.base_ref }}
           CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD)
           DATAZIP_MODIFICATION_YEAR_REGEX="Modified by Datazip Inc\. in [0-9]{4}"
           NOT_MODIFIED_FILES=""

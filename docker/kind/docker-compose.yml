@@ -245,6 +245,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - kind-kubeconfig:/output
+      - kind-bin:/kind-cache
       - ./kind-config.yaml:/kind-config.yaml:ro
       - ./spark-rbac.yaml:/spark-rbac.yaml:ro
     entrypoint:
@@ -253,9 +254,21 @@ services:
       - |
         set -e
 
-        echo "==> Installing kind..."
-        apk add --no-cache curl >/dev/null 2>&1
-        curl -sLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
+        KIND_VERSION="v0.23.0"
+        # SHA256 from https://github.com/kubernetes-sigs/kind/releases/tag/v0.23.0
+        KIND_SHA256="dc3668f4715f75adad6a1a8c96c8e9e71eb3feadbde7b47d491b6d1e40e6e68e"
+
+        echo "==> Installing kind (cached)..."
+        if [ -f "/kind-cache/kind-${KIND_VERSION}" ]; then
+          echo "   Using cached kind binary."
+          cp /kind-cache/kind-${KIND_VERSION} /usr/local/bin/kind
+        else
+          apk add --no-cache curl >/dev/null 2>&1
+          curl -sLo /tmp/kind https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64
+          echo "${KIND_SHA256}  /tmp/kind" | sha256sum -c -
+          cp /tmp/kind /kind-cache/kind-${KIND_VERSION}
+          cp /tmp/kind /usr/local/bin/kind
+        fi
         chmod +x /usr/local/bin/kind
 
         echo "==> Creating Kind cluster (fusion-spark-cluster)..."
@@ -379,3 +392,4 @@ networks:
 volumes:
   kind-kubeconfig:
   spark-home:
+  kind-bin:

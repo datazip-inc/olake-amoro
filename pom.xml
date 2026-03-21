@@ -140,7 +140,7 @@
         <snakeyaml.version>2.2</snakeyaml.version>
         <mybatis.version>3.5.15</mybatis.version>
         <postgres-jdbc.version>42.7.2</postgres-jdbc.version>
-        <derby-jdbc.version>10.14.2.0</derby-jdbc.version>
+        <derby-jdbc.version>10.16.1.1</derby-jdbc.version>
         <commons-dbcp2.version>2.9.0</commons-dbcp2.version>
         <netty.version>4.1.129.Final</netty.version>
         <javalin.version>4.6.8</javalin.version>
@@ -668,8 +668,9 @@
             </dependency>
 
             <dependency>
+                <!-- SLF4J 2.x binding for Log4j2; replaces log4j-slf4j-impl which only works with SLF4J 1.x -->
                 <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-slf4j-impl</artifactId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
                 <version>${log4j.version}</version>
             </dependency>
 
@@ -1388,8 +1389,9 @@
 
         <!-- tests will have log4j as the default logging framework available -->
         <dependency>
+            <!-- SLF4J 2.x binding for Log4j2; replaces log4j-slf4j-impl which only works with SLF4J 1.x -->
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -1532,6 +1534,23 @@
                     <version>${maven-surefire-plugin.version}</version>
                     <configuration>
                         <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                        <!-- Java 17 enforces strong encapsulation; Spark/Hadoop/Iceberg need these opens -->
+                        <argLine>
+                            --add-opens java.base/java.lang=ALL-UNNAMED
+                            --add-opens java.base/java.lang.invoke=ALL-UNNAMED
+                            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                            --add-opens java.base/java.io=ALL-UNNAMED
+                            --add-opens java.base/java.net=ALL-UNNAMED
+                            --add-opens java.base/java.nio=ALL-UNNAMED
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                            --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                            --add-opens java.base/java.util.concurrent.atomic=ALL-UNNAMED
+                            --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+                            --add-opens java.base/sun.nio.cs=ALL-UNNAMED
+                            --add-opens java.base/sun.security.action=ALL-UNNAMED
+                            --add-opens java.base/sun.util.calendar=ALL-UNNAMED
+                            --add-opens java.security.jgss/sun.security.krb5=ALL-UNNAMED
+                        </argLine>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -1583,7 +1602,7 @@
                     <configuration>
                         <java>
                             <googleJavaFormat>
-                                <version>1.7</version>
+                                <version>1.22.0</version>
                             </googleJavaFormat>
                             <removeUnusedImports></removeUnusedImports>
                             <importOrder>

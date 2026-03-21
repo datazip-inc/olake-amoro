@@ -157,7 +157,9 @@ iceberg-data/1.7.2//iceberg-data-1.7.2.jar
 iceberg-hive-metastore/1.7.2//iceberg-hive-metastore-1.7.2.jar
 iceberg-orc/1.7.2//iceberg-orc-1.7.2.jar
 iceberg-parquet/1.7.2//iceberg-parquet-1.7.2.jar
-iceberg-spark-3.3_2.12/1.7.2//iceberg-spark-3.3_2.12-1.7.2.jar
+# NOTE: iceberg-spark-3.3 support was dropped in Iceberg 1.7.0. Last compatible version was 1.6.x.
+# This profile (hadoop-2 + spark-3.3) is no longer supported. Use spark-3.5 instead.
+iceberg-spark-3.3_2.12/1.6.1//iceberg-spark-3.3_2.12-1.6.1.jar
 iceberg-spark-extensions-3.3_2.12/1.7.2//iceberg-spark-extensions-3.3_2.12-1.7.2.jar
 icu4j/69.1//icu4j-69.1.jar
 identity-spi/2.24.12//identity-spi-2.24.12.jar
