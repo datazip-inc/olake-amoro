@@ -119,12 +119,11 @@ stop-deps:
 start-fusion-docker:
 	@echo "Starting Fusion (Kind cluster + all services)..."
 	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile prod up -d
-	@echo "Waiting for Kind cluster setup to complete..."
-	@docker wait fusion-kind-setup 2>/dev/null || true
-	@kind export kubeconfig --name $(KIND_CLUSTER) 2>/dev/null || true
+	@kind export kubeconfig --name $(KIND_CLUSTER) 2>/dev/null
 
 clean-fusion-docker:
 	@kind delete cluster --name $(KIND_CLUSTER) 2>/dev/null || true
+	@kind delete cluster --name fusion-spark-cluster 2>/dev/null || true
 	@docker compose -f $(COMPOSE_DIR)/docker-compose.yml --profile prod down -v
 	@echo "Teardown complete."
 
