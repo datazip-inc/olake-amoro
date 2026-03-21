@@ -196,13 +196,12 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
   }
 
   /**
-   * A type is "unnecessary" when the snapshot is unchanged AND the last completed optimization
+   * A type is "necessary" when the snapshot is changed OR the last completed optimization
    * already covers this type:
    *
    * <ul>
-   *   <li>FULL is covered only by a previous FULL.
-   *   <li>MAJOR is covered by a previous MAJOR or FULL.
-   *   <li>MINOR is covered by any previous optimization (MINOR, MAJOR, or FULL).
+   *   <li>FULL is covered only when last is Minor or Major.
+   *   <li>MAJOR is covered only when last is Minor.
    * </ul>
    */
   private boolean isNecessary(OptimizingType candidate, OptimizingType lastType) {

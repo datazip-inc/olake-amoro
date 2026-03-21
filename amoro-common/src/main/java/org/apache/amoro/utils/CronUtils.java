@@ -115,10 +115,6 @@ public final class CronUtils {
             .truncatedTo(ChronoUnit.MINUTES);
     LocalDateTime end = LocalDateTime.ofInstant(Instant.ofEpochMilli(currentTimeMs), zone);
 
-    // After truncating to a minute boundary the candidate may fall at or before lastFiredMs
-    // (e.g. effectiveStartMs = 20:06:45.339 → candidate = 20:06:00, but lastFiredMs =
-    // 20:06:45.338).
-    // We must only count fires strictly after lastFiredMs, so advance past that point.
     LocalDateTime lastFiredDt = LocalDateTime.ofInstant(Instant.ofEpochMilli(lastFiredMs), zone);
     if (!candidate.isAfter(lastFiredDt)) {
       candidate = lastFiredDt.truncatedTo(ChronoUnit.MINUTES).plusMinutes(1);

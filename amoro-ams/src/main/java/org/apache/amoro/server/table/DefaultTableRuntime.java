@@ -443,11 +443,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
                     optimizingProcess.getTargetChangeSnapshotId());
                 state.setLastOptimizingType(processType.name());
               }
-              // Always advance the per-type timing regardless of success/failure.
-              // This ensures the cron interval acts as a natural retry backoff: without this, a
-              // failed optimization would leave lastXxxOptimizingTime at 0, causing hasFiredSince()
-              // to return true on every 1-minute tick and rescheduling the optimization every
-              // minute.
+              
               if (processType == OptimizingType.MINOR) {
                 state.setLastMinorOptimizingTime(optimizingProcess.getPlanTime());
               } else if (processType == OptimizingType.MAJOR) {
