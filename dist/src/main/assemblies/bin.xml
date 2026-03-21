@@ -30,14 +30,6 @@
     <files>
         <file>
             <source>
-                ../amoro-optimizer/amoro-optimizer-flink/target/amoro-optimizer-flink-${project.version}-jar-with-dependencies.jar
-            </source>
-            <outputDirectory>plugin/optimizer/flink</outputDirectory>
-            <destName>optimizer-job.jar</destName>
-            <fileMode>0644</fileMode>
-        </file>
-        <file>
-            <source>
                 ../amoro-optimizer/amoro-optimizer-spark/target/amoro-optimizer-spark-${spark.major.version}_${scala.binary.version}-${project.version}-jar-with-dependencies.jar
             </source>
             <outputDirectory>plugin/optimizer/spark</outputDirectory>
