@@ -255,8 +255,7 @@ services:
         set -e
 
         KIND_VERSION="v0.23.0"
-        # SHA256 from https://github.com/kubernetes-sigs/kind/releases/tag/v0.23.0
-        KIND_SHA256="dc3668f4715f75adad6a1a8c96c8e9e71eb3feadbde7b47d491b6d1e40e6e68e"
+        KIND_URL="https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
 
         echo "==> Installing kind (cached)..."
         if [ -f "/kind-cache/kind-${KIND_VERSION}" ]; then
@@ -264,8 +263,10 @@ services:
           cp /kind-cache/kind-${KIND_VERSION} /usr/local/bin/kind
         else
           apk add --no-cache curl >/dev/null 2>&1
-          curl -sLo /tmp/kind https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64
-          echo "${KIND_SHA256}  /tmp/kind" | sha256sum -c -
+          curl -sLo /tmp/kind "${KIND_URL}"
+          # Fetch the official checksum file from the same source — stays correct whenever KIND_VERSION changes
+          curl -sLo /tmp/kind.sha256sum "${KIND_URL}.sha256sum"
+          sha256sum -c /tmp/kind.sha256sum
           cp /tmp/kind /kind-cache/kind-${KIND_VERSION}
           cp /tmp/kind /usr/local/bin/kind
         fi
