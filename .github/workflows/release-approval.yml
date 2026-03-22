@@ -16,7 +16,7 @@
 #
 # Modified by Datazip Inc. in 2026
 
-name: Olake Driver Releaser
+name: Fusion Releaser
 
 on:
   release:
