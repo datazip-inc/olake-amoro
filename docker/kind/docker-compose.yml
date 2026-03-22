@@ -31,7 +31,7 @@ services:
         condition: service_completed_successfully
     networks:
       iceberg-net:
-        ipv4_address: 172.30.0.10
+        ipv4_address: 10.210.30.10
     ports:
       - "1630:1630"    # Web UI + REST API
       - "1260:1260"    # Thrift table service
@@ -137,7 +137,7 @@ services:
               "tableFormatList":["ICEBERG"],
               "storageConfig":{
                 "storage.type":"S3",
-                "storage.s3.endpoint":"http://172.30.0.5:9000",
+                "storage.s3.endpoint":"http://10.210.30.5:9000",
                 "storage.s3.region":"us-east-1"
               },
               "authConfig":{
@@ -155,7 +155,7 @@ services:
                 "warehouse":"s3://warehouse/olake_iceberg/",
                 "s3.path-style-access":"true",
                 "io-impl":"org.apache.iceberg.aws.s3.S3FileIO",
-                "endpoint":"http://172.30.0.5:9000",
+                "endpoint":"http://10.210.30.5:9000",
                 "access-key-id":"admin",
                 "secret-access-key":"password"
               },
@@ -180,6 +180,7 @@ services:
       - dev
     networks:
       iceberg-net:
+        ipv4_address: 10.210.30.20
     ports:
     - "5432:5432"
     environment:
@@ -204,7 +205,7 @@ services:
       - dev
     networks:
       iceberg-net:
-        ipv4_address: 172.30.0.5
+        ipv4_address: 10.210.30.5
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password
@@ -374,7 +375,7 @@ networks:
     name: iceberg-net
     ipam:
       config:
-        - subnet: 172.30.0.0/24
+        - subnet: 10.210.30.0/24
 
 volumes:
   kind-kubeconfig:

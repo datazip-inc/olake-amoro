@@ -23,7 +23,7 @@ ams:
   # Static IP on iceberg-net so both the local optimizer and K8s Spark pods can
   # reach the thrift optimizing service without any manual IP edits.
   # In debug mode this is overridden to 127.0.0.1 via AMS_SERVER__EXPOSE__HOST in launch.json.
-  server-expose-host: "172.30.0.10"
+  server-expose-host: "10.210.30.10"
 
   thrift-server:
     max-message-size: 100MB # 104857600
