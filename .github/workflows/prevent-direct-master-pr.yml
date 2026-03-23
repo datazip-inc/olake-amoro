@@ -27,10 +27,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate Branch Rules
+        env:
+          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
         run: |
-          SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}"
-          TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
-
           # Allow only staging → master PRs
           if [ "$TARGET_BRANCH" == "master" ]; then
             if [ "$SOURCE_BRANCH" != "staging" ]; then
@@ -43,8 +43,9 @@ jobs:
           fi
 
       - name: Validate PR Title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
           PATTERN="^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?: .+"
 
           if [[ ! "$PR_TITLE" =~ $PATTERN ]]; then

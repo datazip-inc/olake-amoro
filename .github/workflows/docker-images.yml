@@ -49,25 +49,27 @@ jobs:
     environment: docker publish
     if: ${{ startsWith(github.repository, 'datazip-inc/') }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
           check-latest: false
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Set Docker tags
         id: meta
+        env:
+          VERSION_TAG: ${{ inputs.tag || 'dev-v3' }}
+          GIT_REF: ${{ github.ref }}
         run: |
-          VERSION_TAG="${{ github.event_name == 'workflow_call' && inputs.tag || 'dev-v3' }}"
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+          if [ "$GIT_REF" = "refs/heads/master" ]; then
             case "${VERSION_TAG}" in v*) ;; *) echo "::error::On master branch, version tag must start with 'v' (e.g. v1.0.0). Got: ${VERSION_TAG}"; exit 1 ;; esac
             echo "tags=olakego/fusion:latest,olakego/fusion:${VERSION_TAG}" >> $GITHUB_OUTPUT
           else
@@ -78,7 +80,7 @@ jobs:
         run: echo '${{ steps.meta.outputs.tags }}'
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -87,7 +89,7 @@ jobs:
         run: ./mvnw clean package -pl 'dist' -am -e -DskipTests -B -ntp -Psupport-all-formats -Pno-extended-disk-storage -Pno-plugin-bin
 
       - name: Build and Push Fusion Docker Image to olakego/fusion
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -105,25 +107,27 @@ jobs:
         spark: [ "3.5.8" ]  # spark version supported
         scala: [ "2.13.18" ] # scala version supported
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
           check-latest: false
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Set Docker tags
         id: meta
+        env:
+          VERSION_TAG: ${{ inputs.tag || 'dev-v3' }}
+          GIT_REF: ${{ github.ref }}
         run: |
-          VERSION_TAG="${{ github.event_name == 'workflow_call' && inputs.tag || 'dev-v3' }}"
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
+          if [ "$GIT_REF" = "refs/heads/master" ]; then
             case "${VERSION_TAG}" in v*) ;; *) echo "::error::On master branch, version tag must start with 'v' (e.g. v1.0.0). Got: ${VERSION_TAG}"; exit 1 ;; esac
             echo "tags=olakego/fusion-spark:latest,olakego/fusion-spark:${VERSION_TAG}" >> $GITHUB_OUTPUT
           else
@@ -134,7 +138,7 @@ jobs:
         run: echo '${{ steps.meta.outputs.tags }}'
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -148,7 +152,7 @@ jobs:
           SCALA_BINARY_VERSION=$(echo "${{ matrix.scala }}" | cut -d. -f1-2) && \
           echo "SCALA_BINARY_VERSION=${SCALA_BINARY_VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Set ENV Amoro version
+      - name: Set Fusion version
         id: version
         run: |
           AMORO_VERSION=`cat pom.xml | grep 'amoro-parent' -C 3 | grep -Eo '<version>.*</version>' | awk -F'[><]' '{print $3}'` \
@@ -160,7 +164,7 @@ jobs:
         run: ./mvnw clean package -pl 'amoro-optimizer/amoro-optimizer-spark' -am -e ${SPARK_VERSION} -Dscala.version=${{ matrix.scala }} -Dscala.binary.version=${{ steps.versions.outputs.SCALA_BINARY_VERSION }} -DskipTests -B -ntp
 
       - name: Build and Push Spark Optimizer Docker Image to olakego/fusion-spark
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         env:
           AMORO_VERSION: ${{ steps.version.outputs.AMORO_VERSION }}
           SPARK_MAJOR_VERSION: ${{ steps.versions.outputs.SPARK_MAJOR_VERSION }}

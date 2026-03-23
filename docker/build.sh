@@ -28,14 +28,10 @@ MVN="${PROJECT_HOME}/mvnw"
 cd $CURRENT_DIR
 
 AMORO_VERSION=`cat $PROJECT_HOME/pom.xml | grep 'amoro-parent' -C 3 | grep -Eo '<version>.*</version>' | awk -F'[><]' '{print $3}'`
-FLINK_VERSION=1.20.0
 SPARK_VERSION=3.5.8
+SCALA_BINARY_VERSION=2.13
 DEBIAN_MIRROR=http://deb.debian.org
 APACHE_ARCHIVE=https://archive.apache.org/dist
-FLINK_OPTIMIZER_JOB_PATH=amoro-optimizer/amoro-optimizer-flink/target/amoro-optimizer-flink-${AMORO_VERSION}-jar-with-dependencies.jar
-FLINK_OPTIMIZER_JOB=${PROJECT_HOME}/${FLINK_OPTIMIZER_JOB_PATH}
-SPARK_OPTIMIZER_JOB_PATH=amoro-optimizer/amoro-optimizer-spark/target/amoro-optimizer-spark-${AMORO_VERSION}-jar-with-dependencies.jar
-SPARK_OPTIMIZER_JOB=${PROJECT_HOME}/${SPARK_OPTIMIZER_JOB_PATH}
 AMORO_TAG=$AMORO_VERSION
 MAVEN_MIRROR=https://repo.maven.apache.org/maven2
 
@@ -43,22 +39,20 @@ MAVEN_MIRROR=https://repo.maven.apache.org/maven2
 function usage() {
     cat <<EOF
 Usage: $0 [options] [image]
-Build for Amoro demo docker images.
+Build Fusion docker images.
 
 Images:
-    amoro-flink-optimizer   Build official Amoro optimizer deployed with flink engine for production environments.
-    amoro-spark-optimizer   Build official Amoro optimizer deployed with spark engine for production environments.
-    amoro                   Build official Amoro image used for production environments.
+    amoro-spark-optimizer   Build Fusion optimizer deployed with Spark engine for production environments.
+    amoro                   Build official Fusion image used for production environments.
 
 Options:
-    --flink-version         Flink binary release version, default is 1.20.0, format must be x.y.z
     --spark-version         Spark binary release version, default is 3.5.8, format must be x.y.z
+    --scala-binary-version  Scala binary version, default is 2.13
     --apache-archive        Apache Archive url, default is https://archive.apache.org/dist
     --debian-mirror         Mirror url of debian, default is http://deb.debian.org
     --maven-mirror          Mirror url of maven, default is https://repo.maven.apache.org/maven2
-    --optimizer-job         Location of flink/spark optimizer job
-    --tag                   Tag for amoro/amoro-flink-optimizer/amoro-spark-optimizer image.
-    --dry-run               If this set to true, will not call 'docker build'
+    --optimizer-job         Location of spark optimizer job
+    --tag                   Tag for amoro/amoro-spark-optimizer image.
 EOF
 }
 
@@ -69,22 +63,22 @@ i=1;
 j=$#;
 while [ $i -le $j ]; do
   case $1 in
-    amoro-flink-optimizer|amoro-spark-optimizer|amoro)
+    amoro-spark-optimizer|amoro)
     ACTION=$1;
     i=$((i+1))
-    shift 1
-    ;;
-
-    '--flink-version')
-    shift 1
-    FLINK_VERSION=$1
-    i=$((i+2))
     shift 1
     ;;
 
     '--spark-version')
     shift 1
     SPARK_VERSION=$1
+    i=$((i+2))
+    shift 1
+    ;;
+
+    '--scala-binary-version')
+    shift 1
+    SCALA_BINARY_VERSION=$1
     i=$((i+2))
     shift 1
     ;;
@@ -132,14 +126,14 @@ while [ $i -le $j ]; do
   esac
 done
 
-FLINK_MAJOR_VERSION=${FLINK_VERSION%.*}
 SPARK_MAJOR_VERSION=${SPARK_VERSION%.*}
+SPARK_OPTIMIZER_JOB_PATH=amoro-optimizer/amoro-optimizer-spark/target/amoro-optimizer-spark-${SPARK_MAJOR_VERSION}_${SCALA_BINARY_VERSION}-${AMORO_VERSION}-jar-with-dependencies.jar
+SPARK_OPTIMIZER_JOB=${PROJECT_HOME}/${SPARK_OPTIMIZER_JOB_PATH}
 
 function print_env() {
-  echo "SET FLINK_VERSION=${FLINK_VERSION}"
-  echo "SET FLINK_MAJOR_VERSION=${FLINK_MAJOR_VERSION}"
   echo "SET SPARK_VERSION=${SPARK_VERSION}"
   echo "SET SPARK_MAJOR_VERSION=${SPARK_MAJOR_VERSION}"
+  echo "SET SCALA_BINARY_VERSION=${SCALA_BINARY_VERSION}"
   echo "SET APACHE_ARCHIVE=${APACHE_ARCHIVE}"
   echo "SET DEBIAN_MIRROR=${DEBIAN_MIRROR}"
   echo "SET AMORO_VERSION=${AMORO_VERSION}"
@@ -154,29 +148,6 @@ function print_image() {
    echo "          $image:$tag               "
    echo "=============================================="
    echo "Start Build ${image}:${tag} Image"
-}
-
-function build_optimizer_flink() {
-    local IMAGE_REF=apache/amoro-flink-optimizer
-    local IMAGE_TAG=$AMORO_TAG-flink${FLINK_MAJOR_VERSION}
-    print_image $IMAGE_REF $IMAGE_TAG
-
-    OPTIMIZER_JOB=${FLINK_OPTIMIZER_JOB}
-
-    if [ ! -f "${OPTIMIZER_JOB}" ]; then
-      BUILD_CMD="$MVN clean package -pl amoro-optimizer/amoro-optimizer-flink -am -e -DskipTests"
-      echo "flink optimizer job not exists in ${OPTIMIZER_JOB}"
-      echo "please check the file or run '${BUILD_CMD}' first. "
-      exit  1
-    fi
-
-    set -x
-    cd "$PROJECT_HOME" || exit
-    docker build -t ${IMAGE_REF}:${IMAGE_TAG} \
-      --build-arg FLINK_VERSION=$FLINK_VERSION \
-      --build-arg OPTIMIZER_JOB=$FLINK_OPTIMIZER_JOB_PATH \
-      --build-arg MAVEN_MIRROR=$MAVEN_MIRROR \
-      -f ./docker/optimizer-flink/Dockerfile .
 }
 
 function build_optimizer_spark() {
@@ -225,10 +196,6 @@ function build_amoro() {
 }
 
 case "$ACTION" in
-  amoro-flink-optimizer)
-    print_env
-    build_optimizer_flink
-    ;;
   amoro-spark-optimizer)
     print_env
     build_optimizer_spark

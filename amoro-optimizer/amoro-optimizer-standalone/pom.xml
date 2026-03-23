@@ -48,8 +48,9 @@
         </dependency>
 
         <dependency>
+            <!-- SLF4J 2.x binding for Log4j2; replaces log4j-slf4j-impl which only works with SLF4J 1.x -->
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <scope>runtime</scope>
         </dependency>
 
