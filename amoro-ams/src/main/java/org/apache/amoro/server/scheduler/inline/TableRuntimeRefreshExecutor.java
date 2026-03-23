@@ -196,8 +196,8 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
   }
 
   /**
-   * A type is "necessary" when the snapshot is changed OR the last completed optimization
-   * already covers this type:
+   * A type is "necessary" when the snapshot is changed OR the last completed optimization already
+   * covers this type:
    *
    * <ul>
    *   <li>FULL is covered only when last is Minor or Major.

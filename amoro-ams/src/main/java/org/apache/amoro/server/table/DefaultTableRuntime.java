@@ -443,7 +443,7 @@ public class DefaultTableRuntime extends AbstractTableRuntime
                     optimizingProcess.getTargetChangeSnapshotId());
                 state.setLastOptimizingType(processType.name());
               }
-              
+
               if (processType == OptimizingType.MINOR) {
                 state.setLastMinorOptimizingTime(optimizingProcess.getPlanTime());
               } else if (processType == OptimizingType.MAJOR) {
