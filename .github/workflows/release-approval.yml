@@ -28,7 +28,7 @@ on:
         required: true
 
 jobs:
-  build_all_drivers:
+  build_fusion:
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
     name: Build and Release Fusion
     uses: ./.github/workflows/docker-images.yml
