@@ -39,6 +39,7 @@ spark/spark-warehouse/
 
 # vscode/eclipse files
 .vscode/
+.vscode/
 .classpath
 .project
 bin/
@@ -82,4 +83,4 @@ resources
 /dist/src/main/amoro-bin/*
 !/dist/src/main/amoro-bin/bin/
 !/dist/src/main/amoro-bin/conf/
-/docker/kind/data
+/local-test/data

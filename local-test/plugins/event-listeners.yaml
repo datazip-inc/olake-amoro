@@ -16,22 +16,8 @@
 #
 # Modified by Datazip Inc. in 2026
 
-name: Fusion Releaser
-
-on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "tag to release"
-        required: true
-
-jobs:
-  build_fusion:
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
-    name: Build and Release Fusion
-    uses: ./.github/workflows/docker-images.yml
-    with:
-      tag: ${{ github.event.inputs.tag || github.event.release.tag_name }}
-    secrets: inherit
+# This file is the config file for plugin event listener
+# configurations of event listeners
+event-listeners:
+  - name: logging-listener
+    enabled: false

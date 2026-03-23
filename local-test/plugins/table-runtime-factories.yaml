@@ -16,22 +16,11 @@
 #
 # Modified by Datazip Inc. in 2026
 
-name: Fusion Releaser
+# This file is config file for plugin metric reporter
+# configurations of metric reporters
 
-on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "tag to release"
-        required: true
+table-runtime-factories:
+  - name: default            # configs for table runtime factory
+    enabled: true
+    priority: 100
 
-jobs:
-  build_fusion:
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
-    name: Build and Release Fusion
-    uses: ./.github/workflows/docker-images.yml
-    with:
-      tag: ${{ github.event.inputs.tag || github.event.release.tag_name }}
-    secrets: inherit

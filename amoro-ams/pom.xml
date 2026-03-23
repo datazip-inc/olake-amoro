@@ -370,7 +370,7 @@
             <version>${iceberg.version}</version>
             <scope>runtime</scope>
         </dependency>
-
+        <!-- TODO: check these dependency addition and verify the requirements-->
         <dependency>
             <groupId>org.apache.paimon</groupId>
             <artifactId>paimon-spark-${spark.major.version}</artifactId>
