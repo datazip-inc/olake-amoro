@@ -16,7 +16,7 @@
 #
 # Modified by Datazip Inc. in 2026
 
-COMPOSE_DIR  := docker/kind
+COMPOSE_DIR  := local-test
 KIND_CLUSTER := fusion-cluster
 DIST_TAR     := $(CURDIR)/dist/target/apache-amoro-0.9-SNAPSHOT-bin.tar.gz
 RUNTIME_HOME := $(CURDIR)/dist/target/amoro-0.9-SNAPSHOT

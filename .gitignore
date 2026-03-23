@@ -82,4 +82,4 @@ resources
 /dist/src/main/amoro-bin/*
 !/dist/src/main/amoro-bin/bin/
 !/dist/src/main/amoro-bin/conf/
-/docker/kind/data
+/local-test/data

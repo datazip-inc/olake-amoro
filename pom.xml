@@ -1667,7 +1667,7 @@
                             <exclude>**/components.d.ts</exclude>
                             <exclude>**/Chart.lock</exclude>
                             <exclude>dev/deps/**</exclude>
-                            <exclude>docker/kind/data/**</exclude>
+                            <exclude>local/test/data/**</exclude>
                             <exclude>site/**</exclude>
                             <!-- artifacts created during release process -->
                             <exclude>release/**</exclude>
