@@ -24,6 +24,7 @@
         <Property name="LOG_DIR">${sys:log.home:-logs}</Property>
         <Property name="CONSOLE_LEVEL">${env:CONSOLE_LOG_LEVEL:-info}</Property>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%t] [%c{1}] [P:%X{processId}|T:%X{taskId}|Table:%X{tableName}|Exec:%X{executorId}] - %m%n</Property>
+        <Property name="JSON_LOG_PATTERN">{"level":"%p","time":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}{UTC}","processId":"%X{processId}","taskId":"%X{taskId}","logger":"%c{1}","message":"%enc{%m}{JSON}","stackTrace":"%enc{%throwable{full}}{JSON}"}%n</Property>
     </Properties>
 
     <Appenders>
@@ -38,7 +39,7 @@
                     <RollingFile name="CompactionTask-${ctx:processId}-${ctx:taskId}"
                                  fileName="${LOG_DIR}/compaction/${ctx:logFilePath}.log"
                                  filePattern="${LOG_DIR}/compaction/${ctx:logFilePath}-%d{yyyy-MM-dd-HH}-%i.log.gz">
-                        <PatternLayout pattern="${LOG_PATTERN}"/>
+                        <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
                         <Policies>
                             <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
                             <SizeBasedTriggeringPolicy size="100MB"/>
@@ -51,7 +52,7 @@
                         </DefaultRolloverStrategy>
                     </RollingFile>
                 </Route>
-                
+
                 <Route key="default">
                     <RollingFile name="DefaultOptimizer"
                                  fileName="${LOG_DIR}/optimizer-default.log"
@@ -118,7 +119,7 @@
         <Logger name="org.apache.hadoop.io.compress.CodecPool" level="warn" additivity="false">
             <AppenderRef ref="OptimizerError" level="error"/>
         </Logger>
-        
+
         <Logger name="org.apache.hadoop.metrics2" level="warn" additivity="false">
             <AppenderRef ref="OptimizerError" level="error"/>
         </Logger>

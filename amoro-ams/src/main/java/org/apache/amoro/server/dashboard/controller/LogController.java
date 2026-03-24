@@ -23,12 +23,15 @@ package org.apache.amoro.server.dashboard.controller;
 import io.javalin.http.Context;
 import io.javalin.http.HttpCode;
 import org.apache.amoro.server.dashboard.response.OkResponse;
+import org.apache.amoro.shade.jackson2.com.fasterxml.jackson.databind.JsonNode;
+import org.apache.amoro.shade.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.DirectoryStream;
@@ -43,6 +46,79 @@ import java.util.Map;
 public class LogController {
   private static final Logger LOG = LoggerFactory.getLogger(LogController.class);
   private static final String LOG_BASE_DIR = "/mnt/amoro-logs/compaction";
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+  /**
+   * Parses a log file into a list of JSON objects. The file is expected to be NDJSON
+   * (newline-delimited JSON), but may also contain raw Java stack trace lines that appear after an
+   * ERROR log entry when the log4j2 PatternLayout did not include the throwable inside the JSON
+   * pattern. Such raw lines are collected and attached as a {@code stackTrace} field on the
+   * preceding log entry so the API can deliver them to the UI.
+   *
+   * @param logPath Path to the log file
+   * @return List of parsed log entry objects (as Maps)
+   */
+  private List<Map<String, Object>> parseNDJSONLogFile(Path logPath) {
+    List<Map<String, Object>> logEntries = new ArrayList<>();
+    try (BufferedReader reader = Files.newBufferedReader(logPath)) {
+      String line;
+      int lineNumber = 0;
+      Map<String, Object> lastJsonEntry = null;
+      StringBuilder stackTraceBuffer = new StringBuilder();
+
+      while ((line = reader.readLine()) != null) {
+        lineNumber++;
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+          continue;
+        }
+
+        if (trimmed.startsWith("{")) {
+          // Flush any accumulated raw stack trace lines to the preceding log entry.
+          // Only attach if the entry does not already have a non-empty stackTrace field
+          // (i.e. it was written by an older log4j2 pattern that did not embed the
+          // throwable).
+          if (stackTraceBuffer.length() > 0 && lastJsonEntry != null) {
+            Object existing = lastJsonEntry.get("stackTrace");
+            if (existing == null || existing.toString().isEmpty()) {
+              lastJsonEntry.put("stackTrace", stackTraceBuffer.toString().stripTrailing());
+            }
+            stackTraceBuffer.setLength(0);
+          }
+
+          try {
+            JsonNode jsonNode = OBJECT_MAPPER.readTree(trimmed);
+            Map<String, Object> logEntry = OBJECT_MAPPER.convertValue(jsonNode, Map.class);
+            logEntries.add(logEntry);
+            lastJsonEntry = logEntry;
+          } catch (Exception e) {
+            LOG.warn(
+                "Failed to parse JSON at line {} in {}: {}",
+                lineNumber,
+                logPath.getFileName(),
+                e.getMessage());
+            stackTraceBuffer.append(line).append("\n");
+          }
+        } else {
+          // Non-JSON line: part of a Java stack trace that was written outside the JSON
+          // object.
+          stackTraceBuffer.append(line).append("\n");
+        }
+      }
+
+      // Flush any stack trace that trails the last JSON entry (no subsequent JSON
+      // line).
+      if (stackTraceBuffer.length() > 0 && lastJsonEntry != null) {
+        Object existing = lastJsonEntry.get("stackTrace");
+        if (existing == null || existing.toString().isEmpty()) {
+          lastJsonEntry.put("stackTrace", stackTraceBuffer.toString().stripTrailing());
+        }
+      }
+    } catch (IOException e) {
+      LOG.error("Failed to read log file: {}", logPath, e);
+    }
+    return logEntries;
+  }
 
   public void getProcessLogs(Context ctx) {
     String processId = ctx.pathParam("processId");
@@ -68,8 +144,8 @@ public class LogController {
     if (Files.exists(driverLogPath)) {
       try {
         driverLog.put("exists", true);
-        driverLog.put("content", Files.readString(driverLogPath));
-      } catch (IOException e) {
+        driverLog.put("content", parseNDJSONLogFile(driverLogPath));
+      } catch (Exception e) {
         LOG.error("Failed to read driver log: {}", driverLogPath, e);
         driverLog.put("exists", true);
         driverLog.put("error", "Failed to read: " + e.getMessage());
@@ -94,9 +170,9 @@ public class LogController {
 
         try {
           taskLog.put("exists", true);
-          taskLog.put("content", Files.readString(taskLogPath));
+          taskLog.put("content", parseNDJSONLogFile(taskLogPath));
           taskLogs.add(taskLog);
-        } catch (IOException e) {
+        } catch (Exception e) {
           LOG.error("Failed to read task log: {}", taskLogPath, e);
           taskLog.put("exists", true);
           taskLog.put("error", "Failed to read: " + e.getMessage());
