@@ -14,6 +14,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Modified by Datazip Inc. in 2026
  */
 
 package org.apache.amoro.server.scheduler.inline;
@@ -196,8 +198,8 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
   }
 
   /**
-   * A type is "necessary" when the snapshot is changed OR the last completed optimization
-   * already covers this type:
+   * A type is "necessary" when the snapshot is changed OR the last completed optimization already
+   * covers this type:
    *
    * <ul>
    *   <li>FULL is covered only when last is Minor or Major.
