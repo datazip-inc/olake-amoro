@@ -274,6 +274,7 @@
             <groupId>org.apache.paimon</groupId>
             <artifactId>paimon-spark-${spark.major.version}</artifactId>
             <version>${paimon.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.paimon</groupId>
