@@ -428,7 +428,6 @@ public class DefaultTableRuntime extends AbstractTableRuntime
   }
 
   public void completeProcess(boolean success) {
-    OptimizingStatus originalStatus = getOptimizingStatus();
     OptimizingType processType = optimizingProcess.getOptimizingType();
 
     store()
@@ -469,7 +468,6 @@ public class DefaultTableRuntime extends AbstractTableRuntime
         originalStatus == OptimizingStatus.PLANNING || originalStatus == OptimizingStatus.PENDING;
     if (needUpdate) {
       OptimizingType cronType = this.pendingCronType;
-      long now = System.currentTimeMillis();
       if (cronType != null) {
         recordSkippedOptimization(
             cronType,
@@ -485,13 +483,6 @@ public class DefaultTableRuntime extends AbstractTableRuntime
                 state.setLastOptimizedSnapshotId(state.getCurrentSnapshotId());
                 state.setLastOptimizedChangeSnapshotId(state.getCurrentChangeSnapshotId());
                 if (cronType != null) {
-                  if (cronType == OptimizingType.MINOR) {
-                    state.setLastMinorOptimizingTime(now);
-                  } else if (cronType == OptimizingType.MAJOR) {
-                    state.setLastMajorOptimizingTime(now);
-                  } else if (cronType == OptimizingType.FULL) {
-                    state.setLastFullOptimizingTime(now);
-                  }
                   state.setLastOptimizingType(cronType.name());
                 }
                 return state;

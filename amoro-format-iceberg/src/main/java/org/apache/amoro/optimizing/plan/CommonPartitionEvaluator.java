@@ -425,11 +425,11 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   }
 
   /**
-   * Returns {@code true} if the cron expression has fired at least once since the last optimization
-   * time. Returns {@code false} when no cron is configured (disabled by default).
+   * Returns {@code true} if the cron expression has fired in the last window relative to the
+   * provided plan time. Returns {@code false} when no cron is configured.
    */
   private static boolean reachTrigger(String cronExpr, long planTime, long lastOptimizingTime) {
-    return CronUtils.hasFiredSince(cronExpr, lastOptimizingTime, planTime);
+    return CronUtils.hasFiredInLastMinute(cronExpr);
   }
 
   public boolean isFullNecessary() {

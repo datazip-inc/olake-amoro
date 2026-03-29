@@ -59,7 +59,6 @@ import org.apache.amoro.utils.CronUtils;
  */
 public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
 
-  /** How long to wait between consecutive ticks for the same table (default 1 minute). */
   private final long interval;
 
   public TableRuntimeRefreshExecutor(
@@ -130,7 +129,6 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
       return;
     }
 
-    long now = System.currentTimeMillis();
     boolean snapshotChanged = isSnapshotChanged(tableRuntime, mixedTable);
     OptimizingType lastType = tableRuntime.getLastOptimizingType();
 
@@ -141,9 +139,8 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
         new OptimizingType[] {OptimizingType.FULL, OptimizingType.MAJOR, OptimizingType.MINOR}) {
 
       String cronExpr = cronExpressionFor(cfg, candidate);
-      long lastOptimizingTime = lastOptimizingTimeFor(tableRuntime, candidate);
 
-      if (!CronUtils.hasFiredSince(cronExpr, lastOptimizingTime, now)) {
+      if (!CronUtils.hasFiredInLastMinute(cronExpr)) {
         // Cron has not fired since the last run of this type — skip silently.
         continue;
       }
@@ -236,19 +233,6 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
         return cfg.getMinorTriggerCron();
       default:
         return null;
-    }
-  }
-
-  private long lastOptimizingTimeFor(DefaultTableRuntime tableRuntime, OptimizingType type) {
-    switch (type) {
-      case FULL:
-        return tableRuntime.getLastFullOptimizingTime();
-      case MAJOR:
-        return tableRuntime.getLastMajorOptimizingTime();
-      case MINOR:
-        return tableRuntime.getLastMinorOptimizingTime();
-      default:
-        return 0L;
     }
   }
 }
