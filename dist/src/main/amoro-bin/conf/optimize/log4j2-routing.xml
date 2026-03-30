@@ -21,7 +21,7 @@
 
 <Configuration monitorInterval="30">
     <Properties>
-        <Property name="LOG_DIR">${sys:log.home:-logs}</Property>
+        <Property name="LOG_DIR">${env:LOG_DIR:-/mnt/amoro-logs/compaction}</Property>
         <Property name="CONSOLE_LEVEL">${env:CONSOLE_LOG_LEVEL:-info}</Property>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%t] [%c{1}] [P:%X{processId}|T:%X{taskId}|Table:%X{tableName}|Exec:%X{executorId}] - %m%n</Property>
         <Property name="JSON_LOG_PATTERN">{"level":"%p","time":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}{UTC}","processId":"%X{processId}","taskId":"%X{taskId}","logger":"%c{1}","message":"%enc{%m}{JSON}","stackTrace":"%enc{%throwable{full}}{JSON}"}%n</Property>
@@ -35,25 +35,10 @@
 
         <Routing name="RoutingAppender">
             <Routes pattern="$${ctx:logFilePath}">
+                <!-- When logFilePath MDC is NOT set, the pattern evaluates to the raw
+                     literal "${ctx:logFilePath}" which matches this explicit key.
+                     Route to the generic optimizer log (no per-task file). -->
                 <Route key="$${ctx:logFilePath}">
-                    <RollingFile name="CompactionTask-${ctx:processId}-${ctx:taskId}"
-                                 fileName="${LOG_DIR}/compaction/${ctx:logFilePath}.log"
-                                 filePattern="${LOG_DIR}/compaction/${ctx:logFilePath}-%d{yyyy-MM-dd-HH}-%i.log.gz">
-                        <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
-                        <Policies>
-                            <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
-                            <SizeBasedTriggeringPolicy size="100MB"/>
-                        </Policies>
-                        <DefaultRolloverStrategy max="10">
-                            <Delete basePath="${LOG_DIR}/compaction" maxDepth="3">
-                                <IfFileName glob="*/*.log.gz"/>
-                                <IfLastModified age="7d"/>
-                            </Delete>
-                        </DefaultRolloverStrategy>
-                    </RollingFile>
-                </Route>
-
-                <Route key="default">
                     <RollingFile name="DefaultOptimizer"
                                  fileName="${LOG_DIR}/optimizer-default.log"
                                  filePattern="${LOG_DIR}/history/optimizer-default-%d{yyyy-MM-dd}-%i.log.gz">
@@ -63,6 +48,28 @@
                             <SizeBasedTriggeringPolicy size="100MB"/>
                         </Policies>
                         <DefaultRolloverStrategy max="20"/>
+                    </RollingFile>
+                </Route>
+
+                <!-- Default route (no key): matches when logFilePath IS set.
+                     Writes per-process/task log files directly under LOG_DIR so
+                     the path matches what LogController reads:
+                     LOG_DIR/<processId>/driver.log  or  LOG_DIR/<processId>/<taskId>.log -->
+                <Route>
+                    <RollingFile name="CompactionTask-${ctx:processId}-${ctx:taskId}"
+                                 fileName="${LOG_DIR}/${ctx:logFilePath}.log"
+                                 filePattern="${LOG_DIR}/${ctx:logFilePath}-%d{yyyy-MM-dd-HH}-%i.log.gz">
+                        <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
+                        <Policies>
+                            <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                            <SizeBasedTriggeringPolicy size="100MB"/>
+                        </Policies>
+                        <DefaultRolloverStrategy max="10">
+                            <Delete basePath="${LOG_DIR}" maxDepth="3">
+                                <IfFileName glob="*/*.log.gz"/>
+                                <IfLastModified age="7d"/>
+                            </Delete>
+                        </DefaultRolloverStrategy>
                     </RollingFile>
                 </Route>
             </Routes>

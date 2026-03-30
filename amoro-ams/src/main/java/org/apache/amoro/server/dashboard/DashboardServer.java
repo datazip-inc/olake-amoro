@@ -186,14 +186,13 @@ public class DashboardServer {
       // staticFiles.headers = Map.of(...);
       // headers that will be set for the files
       staticFiles.skipFileFunction = req -> false;
-      // you can use this to skip certain files in the dir, based on the
-      // HttpServletRequest
+      // you can use this to skip certain files in the dir, based on the HttpServletRequest
     };
   }
 
   public EndpointGroup endpoints() {
     return () -> {
-      /* backend routers */
+      /*backend routers*/
       path(
           "",
           () -> {
@@ -451,7 +450,7 @@ public class DashboardServer {
 
   public void handleException(Exception e, Context ctx) {
     if (e instanceof ForbiddenException) {
-      // request doesn't start with /ams is page request. we return index.html
+      // request doesn't start with /ams is  page request. we return index.html
       if (!ctx.req.getRequestURI().startsWith("/api/ams")) {
         ctx.html(getIndexFileContent());
       } else {

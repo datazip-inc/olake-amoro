@@ -68,11 +68,10 @@ public final class CronUtils {
   }
 
   /**
-   * Returns true if the cron expression fired at least once in the last 59 seconds
-   * relative to the provided current time.
+   * Returns true if the cron expression fired at least once in the last 59 seconds relative to the
+   * provided current time.
    */
   public static boolean hasFiredInLastMinute(String cronExpr) {
     return hasFiredInWindow(cronExpr, System.currentTimeMillis(), 59_000);
   }
 }
-

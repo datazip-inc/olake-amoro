@@ -45,7 +45,14 @@ import java.util.Map;
 
 public class LogController {
   private static final Logger LOG = LoggerFactory.getLogger(LogController.class);
-  private static final String LOG_BASE_DIR = "/mnt/amoro-logs/compaction";
+  private static final String LOG_BASE_DIR;
+
+  static {
+    String envLogDir = System.getenv("LOG_DIR");
+    LOG_BASE_DIR =
+        (envLogDir != null && !envLogDir.isEmpty()) ? envLogDir : "/mnt/amoro-logs/compaction";
+  }
+
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   /**
