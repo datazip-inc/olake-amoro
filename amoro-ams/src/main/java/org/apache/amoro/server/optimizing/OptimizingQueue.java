@@ -14,6 +14,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Modified by Datazip Inc. in 2026
  */
 
 package org.apache.amoro.server.optimizing;
@@ -155,6 +157,18 @@ public class OptimizingQueue extends PersistentBase {
               tableRuntime.getTableIdentifier());
           process.close(false);
         }
+      }
+      // A FAILED process cannot dispatch tasks (poll() returns null when status=FAILED),
+      // so it would never trigger acceptResult/persistAndSetCompleted and the table would
+      // stay stuck in a processing status forever. Reset the table to IDLE immediately.
+      if (process != null && process.getStatus() == ProcessStatus.FAILED) {
+        LOG.warn(
+            "Recovering table {} with a FAILED process {} — resetting to IDLE so scheduling"
+                + " can resume",
+            tableRuntime.getTableIdentifier(),
+            process.getProcessId());
+        tableRuntime.completeProcess(false);
+        process = null;
       }
       if (!tableRuntime.getOptimizingStatus().isProcessing()) {
         scheduler.addTable(tableRuntime);
@@ -653,6 +667,21 @@ public class OptimizingQueue extends PersistentBase {
     private void resetTask(TaskRuntime<RewriteStageTask> taskRuntime) {
       lock.lock();
       try {
+        // If the task was actively executing (SCHEDULED or ACKED), the slot it held in
+        // optimizingTasksMap was incremented by poll() but acceptResult() was never called
+        // (the optimizer died). Decrement now so the quota count stays accurate and the
+        // next poll isn't incorrectly blocked by a phantom quota entry.
+        if (taskRuntime.getStatus() == TaskRuntime.Status.SCHEDULED
+            || taskRuntime.getStatus() == TaskRuntime.Status.ACKED) {
+          optimizingTasksMap.computeIfPresent(
+              tableRuntime.getTableIdentifier(),
+              (k, v) -> {
+                if (v.get() > 0) {
+                  v.decrementAndGet();
+                }
+                return v;
+              });
+        }
         taskRuntime.reset();
         taskQueue.add(taskRuntime);
       } finally {
@@ -914,7 +943,20 @@ public class OptimizingQueue extends PersistentBase {
               if (taskRuntime.getStatus() == TaskRuntime.Status.PLANNED) {
                 taskQueue.offer(taskRuntime);
               } else if (taskRuntime.getStatus() == TaskRuntime.Status.FAILED) {
-                retryTask(taskRuntime);
+                taskRuntime.reset();
+                taskQueue.offer(taskRuntime);
+              } else if (taskRuntime.getStatus() == TaskRuntime.Status.SCHEDULED
+                  || taskRuntime.getStatus() == TaskRuntime.Status.ACKED) {
+                // After a server restart the optimizer that held this task is gone.
+                // Reset immediately so any reconnecting optimizer can pick it up rather
+                // than waiting for the OptimizerKeeper's heartbeat expiry cycle (which
+                // requires an optimizer to be connected and its timer to fire first).
+                LOG.warn(
+                    "Resetting {} task {} on recovery — optimizer token is stale after restart",
+                    taskRuntime.getStatus(),
+                    taskRuntime.getTaskId());
+                taskRuntime.reset();
+                taskQueue.offer(taskRuntime);
               }
             });
       } catch (IllegalArgumentException e) {
