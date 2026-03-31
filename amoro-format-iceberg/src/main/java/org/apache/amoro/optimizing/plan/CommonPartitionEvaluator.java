@@ -116,10 +116,8 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
     this.lastMinorOptimizingTime = lastMinorOptimizingTime;
     this.lastMajorOptimizingTime = lastMajorOptimizingTime;
     this.lastFullOptimizingTime = lastFullOptimizingTime;
-    this.reachMajorInterval =
-        reachTrigger(config.getMajorTriggerCron(), planTime, lastMajorOptimizingTime);
-    this.reachFullInterval =
-        reachTrigger(config.getFullTriggerCron(), planTime, lastFullOptimizingTime);
+    this.reachMajorInterval = CronUtils.hasFiredInLastMinute(config.getMajorTriggerCron());
+    this.reachFullInterval = CronUtils.hasFiredInLastMinute(config.getFullTriggerCron());
   }
 
   @Override
@@ -417,19 +415,11 @@ public class CommonPartitionEvaluator implements PartitionEvaluator {
   }
 
   protected boolean reachMinorInterval() {
-    return reachTrigger(config.getMinorTriggerCron(), planTime, lastMinorOptimizingTime);
+    return CronUtils.hasFiredInLastMinute(config.getMinorTriggerCron());
   }
 
   protected boolean reachFullInterval() {
     return reachFullInterval;
-  }
-
-  /**
-   * Returns {@code true} if the cron expression has fired in the last window relative to the
-   * provided plan time. Returns {@code false} when no cron is configured.
-   */
-  private static boolean reachTrigger(String cronExpr, long planTime, long lastOptimizingTime) {
-    return CronUtils.hasFiredInLastMinute(cronExpr);
   }
 
   public boolean isFullNecessary() {

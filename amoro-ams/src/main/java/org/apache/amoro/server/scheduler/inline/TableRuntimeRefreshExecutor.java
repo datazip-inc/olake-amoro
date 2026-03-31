@@ -59,12 +59,15 @@ import org.apache.amoro.utils.CronUtils;
  */
 public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
 
+  // 1 minutes
   private final long interval;
+  private final int maxPendingPartitions;
 
   public TableRuntimeRefreshExecutor(
       TableService tableService, int poolSize, long interval, int maxPendingPartitions) {
     super(tableService, poolSize);
     this.interval = interval;
+    this.maxPendingPartitions = maxPendingPartitions;
   }
 
   @Override
@@ -72,14 +75,10 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
     return tableRuntime instanceof DefaultTableRuntime;
   }
 
+  // cron tick time interval (which checks if any optimization cron passes or not)
   @Override
   protected long getNextExecutingTime(TableRuntime tableRuntime) {
     return interval;
-  }
-
-  @Override
-  protected long getExecutorDelay() {
-    return 0;
   }
 
   @Override
@@ -93,6 +92,11 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
         optimizingProcess.close(false);
       }
     }
+  }
+
+  @Override
+  protected long getExecutorDelay() {
+    return 0;
   }
 
   @Override
@@ -132,49 +136,32 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
     boolean snapshotChanged = isSnapshotChanged(tableRuntime, mixedTable);
     OptimizingType lastType = tableRuntime.getLastOptimizingType();
 
-    boolean scheduled = false;
-    OptimizingType scheduledType = null;
-
     for (OptimizingType candidate :
         new OptimizingType[] {OptimizingType.FULL, OptimizingType.MAJOR, OptimizingType.MINOR}) {
 
       String cronExpr = cronExpressionFor(cfg, candidate);
 
-      if (!CronUtils.hasFiredInLastMinute(cronExpr)) {
-        // Cron has not fired since the last run of this type — skip silently.
-        continue;
-      }
+      if (CronUtils.hasFiredInLastMinute(cronExpr)) {
+        if (snapshotChanged || isNecessary(candidate, lastType)) {
+          logger.info(
+              "[cron-trigger] table={} scheduling {} optimization (snapshotChanged={}, lastType={})",
+              tableRuntime.getTableIdentifier(),
+              candidate,
+              snapshotChanged,
+              lastType);
 
-      if (!scheduled && (snapshotChanged || isNecessary(candidate, lastType))) {
-        // Cron fired AND optimization is necessary — mark the table as pending.
-        logger.info(
-            "[cron-trigger] table={} scheduling {} optimization (snapshotChanged={}, lastType={})",
-            tableRuntime.getTableIdentifier(),
-            candidate,
-            snapshotChanged,
-            lastType);
-        tableRuntime.markAsPending(candidate);
-        scheduled = true;
-        scheduledType = candidate;
-        continue;
+          tableRuntime.markAsPending(candidate);
+        } else {
+          String reason = buildSkipReason(candidate, lastType);
+          logger.info(
+              "[cron-skip] table={} type={} skipped: {}",
+              tableRuntime.getTableIdentifier(),
+              candidate,
+              reason);
+          tableRuntime.recordSkippedOptimization(candidate, reason);
+        }
+        break;
       }
-
-      // Cron fired but there is nothing new to optimize at this level, or a higher priority
-      // optimization is already scheduled.
-      String reason;
-      if (scheduled) {
-        reason =
-            String.format(
-                "skipped because higher priority %s optimization is scheduled", scheduledType);
-      } else {
-        reason = buildSkipReason(candidate, lastType);
-      }
-      logger.info(
-          "[cron-skip] table={} type={} skipped: {}",
-          tableRuntime.getTableIdentifier(),
-          candidate,
-          reason);
-      tableRuntime.recordSkippedOptimization(candidate, reason);
     }
   }
 
