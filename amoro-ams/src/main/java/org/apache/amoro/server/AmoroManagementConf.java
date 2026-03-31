@@ -135,7 +135,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> CLEAN_ORPHAN_FILES_ENABLED =
       ConfigOptions.key("clean-orphan-files.enabled")
           .booleanType()
-          .defaultValue(false)
+          .defaultValue(false)  // TODO: will be enabled with cleaning feature
           .withDescription("Enable orphan files cleaning.");
 
   public static final ConfigOption<Integer> CLEAN_ORPHAN_FILES_THREAD_COUNT =
@@ -153,7 +153,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> CLEAN_DANGLING_DELETE_FILES_ENABLED =
       ConfigOptions.key("clean-dangling-delete-files.enabled")
           .booleanType()
-          .defaultValue(false)
+          .defaultValue(false)  // TODO: will be enabled with cleaning feature
           .withDescription("Enable dangling delete files cleaning.");
 
   public static final ConfigOption<Integer> CLEAN_DANGLING_DELETE_FILES_THREAD_COUNT =
@@ -189,7 +189,7 @@ public class AmoroManagementConf {
   public static final ConfigOption<Boolean> AUTO_CREATE_TAGS_ENABLED =
       ConfigOptions.key("auto-create-tags.enabled")
           .booleanType()
-          .defaultValue(false)
+          .defaultValue(false)  // TODO: will be enabled with cleaning feature
           .withDescription("Enable creating tags.");
 
   public static final ConfigOption<Integer> AUTO_CREATE_TAGS_THREAD_COUNT =

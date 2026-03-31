@@ -49,17 +49,14 @@ public final class CronUtils {
     }
     try {
       Cron cron = UNIX_CRON_PARSER.parse(cronExpr);
-      ExecutionTime executionTime = ExecutionTime.forCron(cron);
+      ExecutionTime cronTime = ExecutionTime.forCron(cron);
+      ZonedDateTime current = ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTimeMs), ZoneId.systemDefault());
 
-      ZonedDateTime current =
-          ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTimeMs), ZoneId.systemDefault());
-      ZonedDateTime start = current.minus(java.time.Duration.ofMillis(windowMs));
-
-      Optional<ZonedDateTime> lastExecution = executionTime.lastExecution(current.plusSeconds(1));
-
-      if (lastExecution.isPresent()) {
-        ZonedDateTime last = lastExecution.get();
-        return last.isAfter(start) && last.isBefore(current);
+      Optional<ZonedDateTime> cronStartTimeOptional = cronTime.lastExecution(current);
+      if (cronStartTimeOptional.isPresent()) {
+        ZonedDateTime cronStartTime = cronStartTimeOptional.get();
+        ZonedDateTime cronEndTime = cronStartTime.plusSeconds(windowMs);
+        return (cronStartTime.isBefore(current)|| cronStartTime.isEqual(current)) && cronEndTime.isAfter(current) ;
       }
       return false;
     } catch (Exception e) {
@@ -72,7 +69,7 @@ public final class CronUtils {
    * relative to the provided current time.
    */
   public static boolean hasFiredInLastMinute(String cronExpr) {
-    return hasFiredInWindow(cronExpr, System.currentTimeMillis(), 59_000);
+    return hasFiredInWindow(cronExpr, System.currentTimeMillis(), 60);
   }
 }
 

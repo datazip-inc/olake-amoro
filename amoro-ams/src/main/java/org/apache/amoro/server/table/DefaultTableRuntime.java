@@ -577,21 +577,6 @@ public class DefaultTableRuntime extends AbstractTableRuntime
               new java.util.HashMap<>(),
               summary);
         });
-    store()
-        .begin()
-        .updateState(
-            OPTIMIZING_STATE_KEY,
-            state -> {
-              if (type == OptimizingType.MINOR) {
-                state.setLastMinorOptimizingTime(now);
-              } else if (type == OptimizingType.MAJOR) {
-                state.setLastMajorOptimizingTime(now);
-              } else if (type == OptimizingType.FULL) {
-                state.setLastFullOptimizingTime(now);
-              }
-              return state;
-            })
-        .commit();
     LOG.info(
         "[cron-skip] table={} type={} skip record persisted, reason: {}",
         getTableIdentifier(),
