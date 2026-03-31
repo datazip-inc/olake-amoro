@@ -22,9 +22,6 @@
 name: Publish Docker Image
 
 on:
-  push:
-    branches:
-      - feat/interval-to-cron
   workflow_call:
     inputs:
       tag:
