@@ -81,7 +81,6 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
     return interval;
   }
 
-
   @Override
   public void handleConfigChanged(TableRuntime tableRuntime, TableConfiguration originalConfig) {
     Preconditions.checkArgument(tableRuntime instanceof DefaultTableRuntime);
@@ -164,8 +163,6 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
         break;
       }
     }
-     
-      
   }
 
   // ── helpers ─────────────────────────────────────────────────────────────────

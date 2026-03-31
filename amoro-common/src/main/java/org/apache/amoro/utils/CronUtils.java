@@ -50,13 +50,15 @@ public final class CronUtils {
     try {
       Cron cron = UNIX_CRON_PARSER.parse(cronExpr);
       ExecutionTime cronTime = ExecutionTime.forCron(cron);
-      ZonedDateTime current = ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTimeMs), ZoneId.systemDefault());
+      ZonedDateTime current =
+          ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTimeMs), ZoneId.systemDefault());
 
       Optional<ZonedDateTime> cronStartTimeOptional = cronTime.lastExecution(current);
       if (cronStartTimeOptional.isPresent()) {
         ZonedDateTime cronStartTime = cronStartTimeOptional.get();
         ZonedDateTime cronEndTime = cronStartTime.plusSeconds(windowMs);
-        return (cronStartTime.isBefore(current)|| cronStartTime.isEqual(current)) && cronEndTime.isAfter(current) ;
+        return (cronStartTime.isBefore(current) || cronStartTime.isEqual(current))
+            && cronEndTime.isAfter(current);
       }
       return false;
     } catch (Exception e) {
@@ -65,11 +67,10 @@ public final class CronUtils {
   }
 
   /**
-   * Returns true if the cron expression fired at least once in the last 59 seconds
-   * relative to the provided current time.
+   * Returns true if the cron expression fired at least once in the last 59 seconds relative to the
+   * provided current time.
    */
   public static boolean hasFiredInLastMinute(String cronExpr) {
     return hasFiredInWindow(cronExpr, System.currentTimeMillis(), 60);
   }
 }
-
