@@ -43,7 +43,7 @@ public final class CronUtils {
 
   private CronUtils() {}
 
-  public static boolean hasFiredInWindow(String cronExpr, long currentTimeMs, long windowMs) {
+  public static boolean hasFiredInWindow(String cronExpr, long currentTimeMs, long windowSec) {
     if (cronExpr == null || cronExpr.trim().isEmpty()) {
       return false;
     }
@@ -56,7 +56,7 @@ public final class CronUtils {
       Optional<ZonedDateTime> cronStartTimeOptional = cronTime.lastExecution(current);
       if (cronStartTimeOptional.isPresent()) {
         ZonedDateTime cronStartTime = cronStartTimeOptional.get();
-        ZonedDateTime cronEndTime = cronStartTime.plusSeconds(windowMs);
+        ZonedDateTime cronEndTime = cronStartTime.plusSeconds(windowSec);
         return (cronStartTime.isBefore(current) || cronStartTime.isEqual(current))
             && cronEndTime.isAfter(current);
       }
