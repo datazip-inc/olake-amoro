@@ -16,6 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+# Modified by Datazip Inc. in 2026
 
 name: OpenAPI SDK CI
 
@@ -25,14 +26,14 @@ concurrency:
 
 on:
   push:
-    branches:
-      - "master"
-      - "0.**"
+    paths:
+      - ".github/workflows/**"
+      - "amoro-ams/src/main/resources/openapi/**"
+      - "amoro-openapi-sdk/**"
+      - "pom.xml"
+      - "tools/maven/**"
 
   pull_request:
-    branches:
-      - "master"
-      - "0.**"
     paths:
       - ".github/workflows/**"
       - "amoro-ams/src/main/resources/openapi/**"
