@@ -51,7 +51,4 @@ RUN rm -f $SPARK_HOME/conf/log4j2.properties $SPARK_HOME/conf/log4j2.properties.
 # Install our log4j2.xml with Routing appender for per-process/task log files
 COPY log4j2.xml $SPARK_HOME/conf/log4j2.xml
 
-# Create the compaction log directory (will be mounted over in K8s)
-RUN mkdir -p /mnt/amoro-logs/compaction && chmod 777 /mnt/amoro-logs/compaction
-
 COPY $OPTIMIZER_JOB $SPARK_HOME/usrlib/optimizer-job.jar

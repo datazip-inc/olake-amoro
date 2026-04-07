@@ -47,7 +47,6 @@ services:
       - ./config.yaml:/usr/local/amoro/conf/config.yaml:ro
       - kind-kubeconfig:/root/.kube:ro
       - spark-home:/opt/spark:ro
-      - amoro-logs:/usr/local/amoro/logs
       - ${AMORO_LOG_DIR:-/opt/amoro-logs}:/mnt/amoro-logs
     command: ["/entrypoint.sh", "ams"]
     tty: true
@@ -391,4 +390,3 @@ networks:
 volumes:
   kind-kubeconfig:
   spark-home:
-  amoro-logs:
