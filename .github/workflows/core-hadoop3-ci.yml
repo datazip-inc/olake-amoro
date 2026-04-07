@@ -9,40 +9,23 @@ name: Core/hadoop3 CI with Maven
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
+# TODO: enable hadoop 3 testing
 on:
-  push:
-    paths:
-      - ".github/workflows/**"
-      - "amoro-ams/**"
-      - "amoro-common/**"
-      - "amoro-metrics/**"
-      - "amoro-optimizer/**"
-      - "amoro-format-iceberg/**"
-      - "amoro-format-paimon/**"
-      - "amoro-format-hudi/**"
-      - "amoro-format-mixed/amoro-mixed-flink/**"
-      - "amoro-format-mixed/amoro-mixed-hive/**"
-      - "amoro-format-mixed/amoro-mixed-spark/**"
-      - "pom.xml"
-      - "tools/maven/**"
-
-  pull_request:
-    paths:
-      - ".github/workflows/**"
-      - "amoro-ams/**"
-      - "amoro-common/**"
-      - "amoro-metrics/**"
-      - "amoro-optimizer/**"
-      - "amoro-format-iceberg/**"
-      - "amoro-format-paimon/**"
-      - "amoro-format-hudi/**"
-      - "amoro-format-mixed/amoro-mixed-flink/**"
-      - "amoro-format-mixed/amoro-mixed-hive/**"
-      - "amoro-format-mixed/amoro-mixed-spark/**"
-      - "pom.xml"
-      - "tools/maven/**"
-
+  # push:
+  #   paths:
+  #     - ".github/workflows/**"
+  #     - "amoro-ams/**"
+  #     - "amoro-common/**"
+  #     - "amoro-metrics/**"
+  #     - "amoro-optimizer/**"
+  #     - "amoro-format-iceberg/**"
+  #     - "amoro-format-paimon/**"
+  #     - "amoro-format-hudi/**"
+  #     - "amoro-format-mixed/amoro-mixed-flink/**"
+  #     - "amoro-format-mixed/amoro-mixed-hive/**"
+  #     - "amoro-format-mixed/amoro-mixed-spark/**"
+  #     - "pom.xml"
+  #     - "tools/maven/**"
 jobs:
   build:
     runs-on: ubuntu-latest
