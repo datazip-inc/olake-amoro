@@ -59,11 +59,12 @@ public class SparkOptimizerExecutor extends OptimizerExecutor {
 
     long processId = task.getTaskId().getProcessId();
     int taskId = task.getTaskId().getTaskId();
+    String driverFilePath = processId + "/driver";
 
     // Set MDC context for Log4j2 routing
     // Driver logs go to: <LOG_DIR>/<processId>/driver.log
     MDC.put("processId", String.valueOf(processId));
-    MDC.put("logFilePath", processId + "/driver");
+    MDC.put("logFilePath", driverFilePath);
 
     try {
       ImmutableList<OptimizingTask> of = ImmutableList.of(task);
@@ -79,13 +80,11 @@ public class SparkOptimizerExecutor extends OptimizerExecutor {
           System.currentTimeMillis() - startTime);
       return result;
     } catch (Throwable r) {
-      long duration = System.currentTimeMillis() - startTime;
-      LOG.error("Task execution failed after {} ms", duration);
       LOG.error(
           "Optimizer executor[{}] executed task[{}] failed, and cost {} ms",
           threadName,
           task.getTaskId(),
-          duration,
+          (System.currentTimeMillis() - startTime),
           r);
       result = new OptimizingTaskResult(task.getTaskId(), threadId);
       result.setErrorMessage(ExceptionUtil.getErrorMessage(r, ERROR_MESSAGE_MAX_LENGTH));

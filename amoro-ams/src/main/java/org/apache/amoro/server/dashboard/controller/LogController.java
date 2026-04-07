@@ -53,6 +53,7 @@ public class LogController {
         (envLogDir != null && !envLogDir.isEmpty()) ? envLogDir : "/mnt/amoro-logs/compaction";
   }
 
+  private static final String DRIVER_LOG_FILE = "driver.log";
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   /**
@@ -146,7 +147,7 @@ public class LogController {
     response.put("exists", true);
 
     // reads driver log
-    Path driverLogPath = processDir.resolve("driver.log");
+    Path driverLogPath = processDir.resolve("DRIVER_LOG_FILE");
     Map<String, Object> driverLog = new HashMap<>();
     if (Files.exists(driverLogPath)) {
       try {
@@ -167,7 +168,7 @@ public class LogController {
     try (DirectoryStream<Path> stream = Files.newDirectoryStream(processDir, "*.log")) {
       for (Path taskLogPath : stream) {
         String fileName = taskLogPath.getFileName().toString();
-        if (fileName.equals("driver.log")) {
+        if (fileName.equals("DRIVER_LOG_FILE")) {
           continue; // skip driver log
         }
 
