@@ -147,7 +147,7 @@ public class LogController {
     response.put("exists", true);
 
     // reads driver log
-    Path driverLogPath = processDir.resolve("DRIVER_LOG_FILE");
+    Path driverLogPath = processDir.resolve(DRIVER_LOG_FILE);
     Map<String, Object> driverLog = new HashMap<>();
     if (Files.exists(driverLogPath)) {
       try {
@@ -168,7 +168,7 @@ public class LogController {
     try (DirectoryStream<Path> stream = Files.newDirectoryStream(processDir, "*.log")) {
       for (Path taskLogPath : stream) {
         String fileName = taskLogPath.getFileName().toString();
-        if (fileName.equals("DRIVER_LOG_FILE")) {
+        if (fileName.equals(DRIVER_LOG_FILE)) {
           continue; // skip driver log
         }
 
