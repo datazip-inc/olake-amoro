@@ -21,6 +21,7 @@ package org.apache.amoro.server.terminal;
 import org.apache.amoro.Constants;
 import org.apache.amoro.TableFormat;
 import org.apache.amoro.api.CatalogMeta;
+import org.apache.amoro.aws.StaticAwsCredentialsProvider;
 import org.apache.amoro.config.ConfigOptions;
 import org.apache.amoro.config.Configurations;
 import org.apache.amoro.properties.CatalogMetaProperties;
@@ -39,6 +40,8 @@ import org.apache.amoro.table.TableMetaStore;
 import org.apache.amoro.utils.CatalogUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.aws.AwsClientProperties;
+import org.apache.iceberg.aws.s3.S3FileIOProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -400,6 +403,24 @@ public class TerminalManager {
             CatalogMetaProperties.KEY_WAREHOUSE, catalogMeta.getCatalogName());
       } else if (!catalogMeta.getCatalogProperties().containsKey(CatalogProperties.CATALOG_IMPL)) {
         catalogMeta.putToCatalogProperties("type", catalogType);
+      }
+      // For Glue catalogs with AK/SK auth, set client.credentials-provider so the
+      // Glue client receives the same credentials that were provided for S3.
+      if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(catalogType)) {
+        Map<String, String> props = catalogMeta.getCatalogProperties();
+        String accessKey = props.get(S3FileIOProperties.ACCESS_KEY_ID);
+        String secretKey = props.get(S3FileIOProperties.SECRET_ACCESS_KEY);
+        if (accessKey != null && secretKey != null) {
+          catalogMeta.putToCatalogProperties(
+              AwsClientProperties.CLIENT_CREDENTIALS_PROVIDER,
+              StaticAwsCredentialsProvider.class.getName());
+          catalogMeta.putToCatalogProperties(
+              "client.credentials-provider." + StaticAwsCredentialsProvider.ACCESS_KEY_ID,
+              accessKey);
+          catalogMeta.putToCatalogProperties(
+              "client.credentials-provider." + StaticAwsCredentialsProvider.SECRET_ACCESS_KEY,
+              secretKey);
+        }
       }
     } else if (formats.contains(TableFormat.PAIMON) && "hive".equals(catalogType)) {
       catalogMeta.putToCatalogProperties("metastore", catalogType);

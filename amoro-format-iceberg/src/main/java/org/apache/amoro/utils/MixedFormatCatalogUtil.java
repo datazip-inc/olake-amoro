@@ -19,6 +19,7 @@
 package org.apache.amoro.utils;
 
 import org.apache.amoro.api.CatalogMeta;
+import org.apache.amoro.aws.StaticAwsCredentialsProvider;
 import org.apache.amoro.io.AuthenticatedFileIO;
 import org.apache.amoro.op.MixedHadoopTableOperations;
 import org.apache.amoro.op.MixedTableOperations;
@@ -36,7 +37,9 @@ import org.apache.iceberg.BaseTable;
 import org.apache.iceberg.CachingCatalog;
 import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.aws.AwsClientProperties;
 import org.apache.iceberg.aws.glue.GlueCatalog;
+import org.apache.iceberg.aws.s3.S3FileIOProperties;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.hadoop.HadoopTableOperations;
 import org.apache.iceberg.rest.RESTCatalog;
@@ -84,6 +87,22 @@ public class MixedFormatCatalogUtil {
         CatalogUtil.normalizeCatalogType(metastoreType));
     if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equals(metastoreType)) {
       icebergCatalogProperties.put(CatalogProperties.CATALOG_IMPL, GlueCatalog.class.getName());
+      // The Glue client does NOT read s3.access-key-id / s3.secret-access-key.
+      // It uses client.credentials-provider or falls back to the default AWS credential chain.
+      // When AK/SK auth is configured, we must set client.credentials-provider so the
+      // Glue client receives the same credentials that were provided for S3.
+      String accessKey = icebergCatalogProperties.get(S3FileIOProperties.ACCESS_KEY_ID);
+      String secretKey = icebergCatalogProperties.get(S3FileIOProperties.SECRET_ACCESS_KEY);
+      if (accessKey != null && secretKey != null) {
+        icebergCatalogProperties.put(
+            AwsClientProperties.CLIENT_CREDENTIALS_PROVIDER,
+            StaticAwsCredentialsProvider.class.getName());
+        icebergCatalogProperties.put(
+            "client.credentials-provider." + StaticAwsCredentialsProvider.ACCESS_KEY_ID, accessKey);
+        icebergCatalogProperties.put(
+            "client.credentials-provider." + StaticAwsCredentialsProvider.SECRET_ACCESS_KEY,
+            secretKey);
+      }
     }
     if (CatalogMetaProperties.CATALOG_TYPE_AMS.equalsIgnoreCase(metastoreType)) {
       icebergCatalogProperties.put(CatalogProperties.WAREHOUSE_LOCATION, catalogName);
