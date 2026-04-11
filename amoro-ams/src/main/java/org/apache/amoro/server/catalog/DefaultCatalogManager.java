@@ -80,11 +80,19 @@ public class DefaultCatalogManager extends PersistentBase implements CatalogMana
     listCatalogMetas()
         .forEach(
             c -> {
-              ServerCatalog serverCatalog =
-                  CatalogBuilder.buildServerCatalog(c, serverConfiguration);
-              serverCatalogMap.put(c.getCatalogName(), serverCatalog);
-              metaCache.put(c.getCatalogName(), Optional.of(c));
-              LOG.info("Load catalog {}, type:{}", c.getCatalogName(), c.getCatalogType());
+              try {
+                ServerCatalog serverCatalog =
+                    CatalogBuilder.buildServerCatalog(c, serverConfiguration);
+                serverCatalogMap.put(c.getCatalogName(), serverCatalog);
+                metaCache.put(c.getCatalogName(), Optional.of(c));
+                LOG.info("Load catalog {}, type:{}", c.getCatalogName(), c.getCatalogType());
+              } catch (Exception e) {
+                LOG.warn(
+                    "Skipping catalog {} (type: {}) - failed to initialize",
+                    c.getCatalogName(),
+                    c.getCatalogType(),
+                    e);
+              }
             });
     LOG.info("DefaultCatalogManager initialized, total catalogs: {}", serverCatalogMap.size());
   }
