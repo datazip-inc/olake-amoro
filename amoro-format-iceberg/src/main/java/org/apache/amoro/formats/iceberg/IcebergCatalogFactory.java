@@ -47,6 +47,7 @@ public class IcebergCatalogFactory implements FormatCatalogFactory {
         MixedFormatCatalogUtil.withIcebergCatalogInitializeProperties(
             name, metastoreType, properties);
 
+  // Setting the StaticAwsCredentialsProvider for Glue catalog to read the S3 credentials
     if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(metastoreType)) {
       Map<String, String> newProperties = Maps.newHashMap(properties);
       String accessKey = newProperties.get(S3FileIOProperties.ACCESS_KEY_ID);

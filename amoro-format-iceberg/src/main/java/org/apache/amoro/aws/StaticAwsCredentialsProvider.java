@@ -27,21 +27,9 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import java.util.Map;
 
 /**
- * A static AWS credentials provider that can be instantiated by Iceberg's {@link
- * org.apache.iceberg.aws.AwsClientProperties} via the {@code create(Map)} reflection mechanism.
- *
- * <p>When configured as {@code client.credentials-provider}, Iceberg strips the {@code
- * client.credentials-provider.} prefix from sub-properties and passes the remaining map to {@link
- * #create(Map)}. This provider reads the following keys from that map:
- *
- * <ul>
- *   <li>{@code access-key-id} — AWS access key ID
- *   <li>{@code secret-access-key} — AWS secret access key
- * </ul>
- *
- * <p>This is needed because the Iceberg Glue client does not read S3-specific credential properties
- * ({@code s3.access-key-id} / {@code s3.secret-access-key}). Without this provider, the Glue client
- * falls back to the default AWS credential chain, which may not have valid credentials.
+ * This is needed because the Iceberg Glue client does not read S3-specific credential properties
+ * (s3.access-key-id / s3.secret-access-key). Without this provider, the Glue client falls back to
+ * the default AWS credential chain, which may not have valid credentials.
  */
 public class StaticAwsCredentialsProvider implements AwsCredentialsProvider {
 
@@ -54,15 +42,6 @@ public class StaticAwsCredentialsProvider implements AwsCredentialsProvider {
     this.credentials = AwsBasicCredentials.create(accessKeyId, secretAccessKey);
   }
 
-  /**
-   * Called by Iceberg via reflection when {@code client.credentials-provider} is set to this
-   * class's fully qualified name. The properties map contains sub-properties under the {@code
-   * client.credentials-provider.} prefix (with the prefix stripped).
-   *
-   * @param properties map containing {@code access-key-id} and {@code secret-access-key}
-   * @return an {@link AwsCredentialsProvider} using the provided static credentials
-   * @throws IllegalArgumentException if either key is missing
-   */
   public static AwsCredentialsProvider create(Map<String, String> properties) {
     String accessKeyId = properties.get(ACCESS_KEY_ID);
     String secretAccessKey = properties.get(SECRET_ACCESS_KEY);
