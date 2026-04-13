@@ -26,13 +26,10 @@ import org.apache.amoro.TableFormat;
 import org.apache.amoro.aws.StaticAwsCredentialsProvider;
 import org.apache.amoro.properties.CatalogMetaProperties;
 import org.apache.amoro.shade.guava32.com.google.common.base.Preconditions;
-import org.apache.amoro.shade.guava32.com.google.common.collect.Maps;
 import org.apache.amoro.table.TableMetaStore;
 import org.apache.amoro.utils.MixedFormatCatalogUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.iceberg.CatalogUtil;
-import org.apache.iceberg.aws.AwsClientProperties;
-import org.apache.iceberg.aws.s3.S3FileIOProperties;
 import org.apache.iceberg.catalog.Catalog;
 
 import java.util.Map;
@@ -47,23 +44,8 @@ public class IcebergCatalogFactory implements FormatCatalogFactory {
         MixedFormatCatalogUtil.withIcebergCatalogInitializeProperties(
             name, metastoreType, properties);
 
-    // Setting the StaticAwsCredentialsProvider for Glue catalog to read the S3 credentials
     if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(metastoreType)) {
-      Map<String, String> newProperties = Maps.newHashMap(properties);
-      String accessKey = newProperties.get(S3FileIOProperties.ACCESS_KEY_ID);
-      String secretKey = newProperties.get(S3FileIOProperties.SECRET_ACCESS_KEY);
-
-      if (accessKey != null && secretKey != null) {
-        newProperties.put(
-            AwsClientProperties.CLIENT_CREDENTIALS_PROVIDER,
-            StaticAwsCredentialsProvider.class.getName());
-        newProperties.put(
-            "client.credentials-provider." + StaticAwsCredentialsProvider.ACCESS_KEY_ID, accessKey);
-        newProperties.put(
-            "client.credentials-provider." + StaticAwsCredentialsProvider.SECRET_ACCESS_KEY,
-            secretKey);
-        properties = newProperties;
-      }
+      properties = StaticAwsCredentialsProvider.applyGlueCredentials(properties);
     }
 
     Catalog icebergCatalog =
