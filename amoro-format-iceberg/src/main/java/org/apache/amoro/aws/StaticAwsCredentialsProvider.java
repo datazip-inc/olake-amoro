@@ -20,10 +20,13 @@
 
 package org.apache.amoro.aws;
 
+import org.apache.iceberg.aws.AwsClientProperties;
+import org.apache.iceberg.aws.s3.S3FileIOProperties;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -51,6 +54,31 @@ public class StaticAwsCredentialsProvider implements AwsCredentialsProvider {
               + "client.credentials-provider properties");
     }
     return new StaticAwsCredentialsProvider(accessKeyId, secretAccessKey);
+  }
+
+  /**
+   * Returns a copy of {@code properties} enriched with {@link
+   * AwsClientProperties#CLIENT_CREDENTIALS_PROVIDER} pointing at this class, so that Glue (and any
+   * other AWS client) uses the S3 AK/SK instead of the default credential chain. If {@code
+   * properties} is null, returns null. If either S3 key is absent, returns {@code properties}
+   * unchanged (same instance).
+   */
+  public static Map<String, String> applyGlueCredentials(Map<String, String> properties) {
+    if (properties == null) {
+      return null;
+    }
+    String accessKey = properties.get(S3FileIOProperties.ACCESS_KEY_ID);
+    String secretKey = properties.get(S3FileIOProperties.SECRET_ACCESS_KEY);
+    if (accessKey == null || secretKey == null) {
+      return properties;
+    }
+    Map<String, String> newProperties = new HashMap<>(properties);
+    newProperties.put(
+        AwsClientProperties.CLIENT_CREDENTIALS_PROVIDER,
+        StaticAwsCredentialsProvider.class.getName());
+    newProperties.put("client.credentials-provider." + ACCESS_KEY_ID, accessKey);
+    newProperties.put("client.credentials-provider." + SECRET_ACCESS_KEY, secretKey);
+    return newProperties;
   }
 
   @Override

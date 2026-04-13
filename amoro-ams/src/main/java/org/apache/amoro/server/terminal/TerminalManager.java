@@ -42,8 +42,6 @@ import org.apache.amoro.table.TableMetaStore;
 import org.apache.amoro.utils.CatalogUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
-import org.apache.iceberg.aws.AwsClientProperties;
-import org.apache.iceberg.aws.s3.S3FileIOProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -410,18 +408,9 @@ public class TerminalManager {
       // Glue client receives the same credentials that were provided for S3.
       if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(catalogType)) {
         Map<String, String> props = catalogMeta.getCatalogProperties();
-        String accessKey = props.get(S3FileIOProperties.ACCESS_KEY_ID);
-        String secretKey = props.get(S3FileIOProperties.SECRET_ACCESS_KEY);
-        if (accessKey != null && secretKey != null) {
-          catalogMeta.putToCatalogProperties(
-              AwsClientProperties.CLIENT_CREDENTIALS_PROVIDER,
-              StaticAwsCredentialsProvider.class.getName());
-          catalogMeta.putToCatalogProperties(
-              "client.credentials-provider." + StaticAwsCredentialsProvider.ACCESS_KEY_ID,
-              accessKey);
-          catalogMeta.putToCatalogProperties(
-              "client.credentials-provider." + StaticAwsCredentialsProvider.SECRET_ACCESS_KEY,
-              secretKey);
+        Map<String, String> enriched = StaticAwsCredentialsProvider.applyGlueCredentials(props);
+        if (enriched != null && enriched != props) {
+          enriched.forEach(catalogMeta::putToCatalogProperties);
         }
       }
     } else if (formats.contains(TableFormat.PAIMON) && "hive".equals(catalogType)) {
