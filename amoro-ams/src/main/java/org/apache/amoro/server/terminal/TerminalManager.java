@@ -410,7 +410,6 @@ public class TerminalManager {
         Map<String, String> props = catalogMeta.getCatalogProperties();
         Map<String, String> enriched = StaticAwsCredentialsProvider.applyGlueCredentials(props);
         // Only merge when a new map was produced: same instance means nothing to add, and merging
-        // would re-iterate the live CatalogMeta map while mutating it.
         if (enriched != null && enriched != props) {
           enriched.forEach(catalogMeta::putToCatalogProperties);
         }
