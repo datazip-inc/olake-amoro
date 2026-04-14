@@ -404,8 +404,7 @@ public class TerminalManager {
       } else if (!catalogMeta.getCatalogProperties().containsKey(CatalogProperties.CATALOG_IMPL)) {
         catalogMeta.putToCatalogProperties("type", catalogType);
       }
-      // For Glue catalogs with AK/SK auth, set client.credentials-provider so the
-      // Glue client receives the same credentials that were provided for S3.
+      // apply glue credentials to glue catalog
       if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(catalogType)) {
         Map<String, String> props = catalogMeta.getCatalogProperties();
         Map<String, String> enriched = StaticAwsCredentialsProvider.applyGlueCredentials(props);

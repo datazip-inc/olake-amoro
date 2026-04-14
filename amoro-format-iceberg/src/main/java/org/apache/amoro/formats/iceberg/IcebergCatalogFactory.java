@@ -43,7 +43,7 @@ public class IcebergCatalogFactory implements FormatCatalogFactory {
     properties =
         MixedFormatCatalogUtil.withIcebergCatalogInitializeProperties(
             name, metastoreType, properties);
-
+    // apply glue credentials to glue catalog
     if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(metastoreType)) {
       properties = StaticAwsCredentialsProvider.applyGlueCredentials(properties);
     }
