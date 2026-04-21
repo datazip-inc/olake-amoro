@@ -31,10 +31,14 @@ import org.apache.amoro.utils.MixedFormatCatalogUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.catalog.Catalog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
 public class IcebergCatalogFactory implements FormatCatalogFactory {
+
+  private static final Logger LOG = LoggerFactory.getLogger(IcebergCatalogFactory.class);
 
   @Override
   public FormatCatalog create(
@@ -45,11 +49,17 @@ public class IcebergCatalogFactory implements FormatCatalogFactory {
             name, metastoreType, properties);
     // apply glue credentials to glue catalog
     if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(metastoreType)) {
-      properties = StaticAwsCredentialsProvider.applyGlueCredentials(properties);
+      long tCreds = System.currentTimeMillis();
+      properties = StaticAwsCredentialsProvider.resolveAndApplyGlueCredentials(properties);
+      LOG.info("[TIMING][CATALOG-INIT] catalog={} metastoreType={} resolveAndApplyGlueCredentials took {} ms",
+          name, metastoreType, System.currentTimeMillis() - tCreds);
     }
 
+    long tBuild = System.currentTimeMillis();
     Catalog icebergCatalog =
         CatalogUtil.buildIcebergCatalog(name, properties, metaStore.getConfiguration());
+    LOG.info("[TIMING][CATALOG-INIT] catalog={} metastoreType={} impl={} buildIcebergCatalog (handshake/connect) took {} ms",
+        name, metastoreType, icebergCatalog.getClass().getSimpleName(), System.currentTimeMillis() - tBuild);
     return new IcebergCatalog(icebergCatalog, properties, metaStore);
   }
 

@@ -219,9 +219,22 @@ public class UnKeyedTableCommit {
     long startTime = System.currentTimeMillis();
     LOG.info("Starting to commit table {} with {} tasks.", table.id(), tasks.size());
 
+    long tExcluded = System.currentTimeMillis();
     Set<ContentFile<?>> excludedDeleteFiles = getExcludedDeleteFiles(successTasks);
+    LOG.info(
+        "[TIMING][COMMIT] {} getExcludedDeleteFiles took {} ms",
+        table.id(),
+        System.currentTimeMillis() - tExcluded);
+
+    long tHive = System.currentTimeMillis();
     List<DataFile> hiveNewDataFiles = moveFile2HiveIfNeed();
+    LOG.info(
+        "[TIMING][COMMIT] {} moveFile2HiveIfNeed took {} ms",
+        table.id(),
+        System.currentTimeMillis() - tHive);
+
     // collect files
+    long tCollect = System.currentTimeMillis();
     Set<DataFile> addedDataFiles = Sets.newHashSet();
     Set<DataFile> removedDataFiles = Sets.newHashSet();
     Set<DeleteFile> addedDeleteFiles = Sets.newHashSet();
@@ -249,8 +262,23 @@ public class UnKeyedTableCommit {
                         .collect(Collectors.toSet()));
               }
             });
+    LOG.info(
+        "[TIMING][COMMIT] {} file collection took {} ms: +{}data -{}data +{}del -{}del",
+        table.id(),
+        System.currentTimeMillis() - tCollect,
+        addedDataFiles.size(),
+        removedDataFiles.size(),
+        addedDeleteFiles.size(),
+        removedDeleteFiles.size());
+
     try {
+      long tTxn = System.currentTimeMillis();
       Transaction transaction = table.asUnkeyedTable().newTransaction();
+      LOG.info(
+          "[TIMING][COMMIT] {} newTransaction() took {} ms",
+          table.id(),
+          System.currentTimeMillis() - tTxn);
+
       if (removedDeleteFiles.isEmpty() && !addedDeleteFiles.isEmpty()) {
         /* In order to avoid the validation in
         {@link org.apache.iceberg.BaseRewriteFiles#validateReplacedAndAddedFiles} which will throw
@@ -263,7 +291,12 @@ public class UnKeyedTableCommit {
         rewriteFiles(
             transaction, removedDataFiles, addedDataFiles, removedDeleteFiles, addedDeleteFiles);
       }
+      long tCommitTxn = System.currentTimeMillis();
       transaction.commitTransaction();
+      LOG.info(
+          "[TIMING][COMMIT] {} transaction.commitTransaction() (write metadata.json + Glue UpdateTable) took {} ms",
+          table.id(),
+          System.currentTimeMillis() - tCommitTxn);
       LOG.info(
           "Successfully committed table {} in {} ms.",
           table.id(),
@@ -300,8 +333,13 @@ public class UnKeyedTableCommit {
       return;
     }
 
+    long tNewRewrite = System.currentTimeMillis();
     RewriteFiles rewriteFiles =
         transaction.newRewrite().scanManifestsWith(IcebergThreadPools.getCommitExecutor());
+    LOG.info(
+        "[TIMING][COMMIT] {} transaction.newRewrite() took {} ms",
+        table.id(),
+        System.currentTimeMillis() - tNewRewrite);
     if (targetSnapshotId != Constants.INVALID_SNAPSHOT_ID) {
       long sequenceNumber = table.asUnkeyedTable().snapshot(targetSnapshotId).sequenceNumber();
       rewriteFiles.validateFromSnapshot(targetSnapshotId).dataSequenceNumber(sequenceNumber);
@@ -317,7 +355,12 @@ public class UnKeyedTableCommit {
       }
       rewriteFiles.set(SYNC_DATA_TO_HIVE, "true");
     }
+    long tRewriteCommit = System.currentTimeMillis();
     rewriteFiles.commit();
+    LOG.info(
+        "[TIMING][COMMIT] {} rewriteFiles.commit() (S3 manifest scan + write new manifests) took {} ms",
+        table.id(),
+        System.currentTimeMillis() - tRewriteCommit);
   }
 
   private void addDeleteFiles(Transaction transaction, Set<DeleteFile> addDeleteFiles) {
@@ -325,7 +368,12 @@ public class UnKeyedTableCommit {
         transaction.newRowDelta().scanManifestsWith(IcebergThreadPools.getCommitExecutor());
     addDeleteFiles.forEach(rowDelta::addDeletes);
     rowDelta.set(SnapshotSummary.SNAPSHOT_PRODUCER, CommitMetaProducer.OPTIMIZE.name());
+    long tRowDelta = System.currentTimeMillis();
     rowDelta.commit();
+    LOG.info(
+        "[TIMING][COMMIT] {} rowDelta.commit() (S3 manifest scan + write new manifests) took {} ms",
+        table.id(),
+        System.currentTimeMillis() - tRowDelta);
   }
 
   protected boolean needMoveFile2Hive() {

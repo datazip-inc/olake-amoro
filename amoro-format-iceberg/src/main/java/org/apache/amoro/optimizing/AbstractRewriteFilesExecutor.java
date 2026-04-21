@@ -97,6 +97,12 @@ public abstract class AbstractRewriteFilesExecutor
   @Override
   public RewriteFilesOutput execute() {
     LOG.info("Start processing table optimize task: {}", input);
+    LOG.info(
+        "[TIMING][EXEC] Starting task: {} data files to rewrite, {} equality-delete files to convert",
+        ArrayUtils.isEmpty(input.rewrittenDataFiles()) ? 0 : input.rewrittenDataFiles().length,
+        ArrayUtils.isEmpty(input.rePosDeletedDataFiles())
+            ? 0
+            : input.rePosDeletedDataFiles().length);
 
     List<DataFile> dataFiles = new ArrayList<>();
     List<DeleteFile> deleteFiles = new ArrayList<>();
@@ -104,16 +110,27 @@ public abstract class AbstractRewriteFilesExecutor
     long startTime = System.currentTimeMillis();
     try {
       if (!ArrayUtils.isEmpty(input.rePosDeletedDataFiles())) {
+        long tPos = System.currentTimeMillis();
         deleteFiles = io.doAs(this::equalityToPosition);
+        LOG.info(
+            "[TIMING][EXEC] equalityToPosition (eq→pos delete conversion, S3 read+write) took {} ms, produced {} delete files",
+            System.currentTimeMillis() - tPos,
+            deleteFiles.size());
       }
 
       if (!ArrayUtils.isEmpty(input.rewrittenDataFiles())) {
+        long tRewrite = System.currentTimeMillis();
         dataFiles = io.doAs(this::rewriterDataFiles);
+        LOG.info(
+            "[TIMING][EXEC] rewriterDataFiles (S3 read+compact+write) took {} ms, produced {} data files",
+            System.currentTimeMillis() - tRewrite,
+            dataFiles.size());
       }
     } finally {
       dataReader.close();
     }
     long duration = System.currentTimeMillis() - startTime;
+    LOG.info("[TIMING][EXEC] Total task execution took {} ms", duration);
 
     Map<String, String> summary = resolverSummary(dataFiles, deleteFiles, duration);
     return new RewriteFilesOutput(

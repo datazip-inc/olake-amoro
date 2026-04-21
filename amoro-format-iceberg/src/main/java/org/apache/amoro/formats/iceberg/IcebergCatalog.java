@@ -28,6 +28,8 @@ import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -35,12 +37,16 @@ import java.util.stream.Collectors;
 
 public class IcebergCatalog implements FormatCatalog {
 
+  private static final Logger LOG = LoggerFactory.getLogger(IcebergCatalog.class);
+
   private SupportsNamespaces asNamespaceCatalog;
   private final Catalog icebergCatalog;
   private final TableMetaStore metaStore;
   private final Map<String, String> properties;
+  private final String underlyingCatalogImpl;
 
   public IcebergCatalog(Catalog catalog, Map<String, String> properties, TableMetaStore metaStore) {
+    this.underlyingCatalogImpl = catalog.getClass().getSimpleName();
     this.icebergCatalog = MixedFormatCatalogUtil.buildCacheCatalog(catalog, properties);
     if (catalog instanceof SupportsNamespaces) {
       this.asNamespaceCatalog = (SupportsNamespaces) catalog;
@@ -101,7 +107,15 @@ public class IcebergCatalog implements FormatCatalog {
     return metaStore.doAs(
         () -> {
           try {
+            long tCatalogLoad = System.currentTimeMillis();
             Table icebergTable = icebergCatalog.loadTable(TableIdentifier.of(database, table));
+            LOG.info(
+                "[TIMING][CATALOG] impl={} catalog={} loadTable({}.{}) API call took {} ms",
+                underlyingCatalogImpl,
+                icebergCatalog.name(),
+                database,
+                table,
+                System.currentTimeMillis() - tCatalogLoad);
             return IcebergTable.newIcebergTable(
                 org.apache.amoro.table.TableIdentifier.of(icebergCatalog.name(), database, table),
                 icebergTable,

@@ -331,15 +331,42 @@ public class OptimizingQueue extends PersistentBase {
     tableRuntime.beginPlanning();
     try {
       ServerTableIdentifier identifier = tableRuntime.getTableIdentifier();
+
+      long tLoad = System.currentTimeMillis();
       AmoroTable<?> table = catalogManager.loadTable(identifier.getIdentifier());
+      LOG.info(
+          "[TIMING][PLAN] {} loadTable (Glue API + metadata parse) took {} ms",
+          identifier,
+          System.currentTimeMillis() - tLoad);
+
+      long tRefresh = System.currentTimeMillis();
+      DefaultTableRuntime refreshedRuntime = tableRuntime.refresh(table);
+      LOG.info(
+          "[TIMING][PLAN] {} tableRuntime.refresh took {} ms",
+          identifier,
+          System.currentTimeMillis() - tRefresh);
+
+      long tPlanner = System.currentTimeMillis();
       AbstractOptimizingPlanner planner =
           IcebergTableUtil.createOptimizingPlanner(
-              tableRuntime.refresh(table),
+              refreshedRuntime,
               (MixedTable) table.originalTable(),
               getAvailableCore(),
               maxInputSizePerThread());
+      LOG.info(
+          "[TIMING][PLAN] {} createOptimizingPlanner (S3 manifest scan) took {} ms",
+          identifier,
+          System.currentTimeMillis() - tPlanner);
+
       if (planner.isNecessary()) {
-        return new TableOptimizingProcess(planner, tableRuntime);
+        long tProcess = System.currentTimeMillis();
+        TableOptimizingProcess process = new TableOptimizingProcess(planner, tableRuntime);
+        LOG.info(
+            "[TIMING][PLAN] {} planTasks+persist took {} ms, {} tasks planned",
+            identifier,
+            System.currentTimeMillis() - tProcess,
+            process.getTaskMap().size());
+        return process;
       } else {
         tableRuntime.completeEmptyProcess();
         return null;
@@ -757,7 +784,18 @@ public class OptimizingQueue extends PersistentBase {
         }
         try {
           hasCommitted = true;
-          buildCommit().commit();
+          long tBuildCommit = System.currentTimeMillis();
+          UnKeyedTableCommit tableCommit = buildCommit();
+          LOG.info(
+              "[TIMING][COMMIT] {} buildCommit (Glue table reload) took {} ms",
+              tableRuntime.getTableIdentifier(),
+              System.currentTimeMillis() - tBuildCommit);
+          long tDoCommit = System.currentTimeMillis();
+          tableCommit.commit();
+          LOG.info(
+              "[TIMING][COMMIT] {} tableCommit.commit() (manifest rewrite + Glue metadata update) took {} ms",
+              tableRuntime.getTableIdentifier(),
+              System.currentTimeMillis() - tDoCommit);
           if (allTasksPrepared()) {
             status = ProcessStatus.SUCCESS;
           } else if (taskMap.values().stream()
