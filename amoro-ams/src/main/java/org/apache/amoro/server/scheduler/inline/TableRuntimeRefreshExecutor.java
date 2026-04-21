@@ -109,13 +109,17 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
 
       long tLoad = System.currentTimeMillis();
       AmoroTable<?> table = loadTable(tableRuntime);
-      logger.info("[TIMING][REFRESH] {} loadTable (catalog API call) took {} ms",
-          tableRuntime.getTableIdentifier(), System.currentTimeMillis() - tLoad);
+      logger.info(
+          "[TIMING][REFRESH] {} loadTable (catalog API call) took {} ms",
+          tableRuntime.getTableIdentifier(),
+          System.currentTimeMillis() - tLoad);
 
       long tRefresh = System.currentTimeMillis();
       defaultTableRuntime.refresh(table);
-      logger.info("[TIMING][REFRESH] {} tableRuntime.refresh took {} ms",
-          tableRuntime.getTableIdentifier(), System.currentTimeMillis() - tRefresh);
+      logger.info(
+          "[TIMING][REFRESH] {} tableRuntime.refresh took {} ms",
+          tableRuntime.getTableIdentifier(),
+          System.currentTimeMillis() - tRefresh);
 
       MixedTable mixedTable = (MixedTable) table.originalTable();
       // first, evaluate cron then update healthscore
@@ -123,8 +127,10 @@ public class TableRuntimeRefreshExecutor extends PeriodicTableScheduler {
 
       long tHealth = System.currentTimeMillis();
       updateHealthScore(defaultTableRuntime, mixedTable);
-      logger.info("[TIMING][REFRESH] {} updateHealthScore (S3 manifest scan) took {} ms",
-          tableRuntime.getTableIdentifier(), System.currentTimeMillis() - tHealth);
+      logger.info(
+          "[TIMING][REFRESH] {} updateHealthScore (S3 manifest scan) took {} ms",
+          tableRuntime.getTableIdentifier(),
+          System.currentTimeMillis() - tHealth);
     } catch (Throwable throwable) {
       logger.error("Refreshing table {} failed.", tableRuntime.getTableIdentifier(), throwable);
     }

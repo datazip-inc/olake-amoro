@@ -50,16 +50,23 @@ public class IcebergCatalogFactory implements FormatCatalogFactory {
     // apply glue credentials to glue catalog
     if (CatalogMetaProperties.CATALOG_TYPE_GLUE.equalsIgnoreCase(metastoreType)) {
       long tCreds = System.currentTimeMillis();
-      properties = StaticAwsCredentialsProvider.resolveAndApplyGlueCredentials(properties);
-      LOG.info("[TIMING][CATALOG-INIT] catalog={} metastoreType={} resolveAndApplyGlueCredentials took {} ms",
-          name, metastoreType, System.currentTimeMillis() - tCreds);
+      properties = StaticAwsCredentialsProvider.applyGlueCredentials(properties);
+      LOG.info(
+          "[TIMING][CATALOG-INIT] catalog={} metastoreType={} applyGlueCredentials took {} ms",
+          name,
+          metastoreType,
+          System.currentTimeMillis() - tCreds);
     }
 
     long tBuild = System.currentTimeMillis();
     Catalog icebergCatalog =
         CatalogUtil.buildIcebergCatalog(name, properties, metaStore.getConfiguration());
-    LOG.info("[TIMING][CATALOG-INIT] catalog={} metastoreType={} impl={} buildIcebergCatalog (handshake/connect) took {} ms",
-        name, metastoreType, icebergCatalog.getClass().getSimpleName(), System.currentTimeMillis() - tBuild);
+    LOG.info(
+        "[TIMING][CATALOG-INIT] catalog={} metastoreType={} impl={} buildIcebergCatalog (handshake/connect) took {} ms",
+        name,
+        metastoreType,
+        icebergCatalog.getClass().getSimpleName(),
+        System.currentTimeMillis() - tBuild);
     return new IcebergCatalog(icebergCatalog, properties, metaStore);
   }
 
