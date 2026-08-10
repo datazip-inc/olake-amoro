@@ -83,5 +83,6 @@ resources
 /dist/src/main/amoro-bin/*
 !/dist/src/main/amoro-bin/bin/
 !/dist/src/main/amoro-bin/conf/
-/local-test/data.cocoindex_code/
+/local-test/data
+.cocoindex_code/
 CLAUDE.local.md
